@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Files</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="app">
+  <div class="app-toolbar">
+    <button class="ros-btn icon ghost" id="nav-back" data-icon="chevron-left" data-size="17" title="Back"></button>
+    <button class="ros-btn icon ghost" id="nav-forward" data-icon="chevron-right" data-size="17" title="Forward"></button>
+    <button class="ros-btn icon ghost" id="nav-up" data-icon="arrow-up" data-size="16" title="Up one level"></button>
+    <div class="crumbs" id="crumbs"></div>
+    <div class="search-shell">
+      <span data-icon="search" data-size="15"></span>
+      <input id="search" type="text" placeholder="Search this folder" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="tb-sep"></div>
+    <button class="ros-btn sm" id="new-folder" title="New folder"><span data-icon="folder-plus" data-size="15"></span> Folder</button>
+    <button class="ros-btn sm" id="new-file" title="New text file"><span data-icon="file-plus" data-size="15"></span> File</button>
+    <button class="ros-btn sm icon" id="upload" data-icon="upload" data-size="16" title="Upload files"></button>
+    <button class="ros-btn sm icon danger" id="empty-trash" data-icon="trash" data-size="16" title="Empty trash" hidden></button>
+    <button class="ros-btn sm icon ghost" id="view-toggle" data-icon="list" data-size="17" title="Switch to grid view"></button>
+    <input type="file" id="file-input" multiple hidden>
+  </div>
+
+  <div class="app-body">
+    <aside class="sidebar" id="sidebar"></aside>
+    <section class="panel" id="panel">
+      <div class="scroll" id="list-host"></div>
+      <div class="drop-zone" id="drop-zone" hidden>Drop files to import them here</div>
+    </section>
+  </div>
+
+  <div class="app-status">
+    <span id="status-count">Loading…</span>
+    <span id="status-selection"></span>
+    <span class="ros-spacer"></span>
+    <span id="status-disk"></span>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

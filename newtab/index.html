@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071522">
+  <meta name="color-scheme" content="dark light">
+  <title>New Tab</title>
+  <link rel="icon" href="../icons/icon-32.png">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Boot splash (optional, enabled in Settings -> Desktop) -->
+  <div id="boot-screen" class="boot-screen" hidden>
+    <div class="boot-logo" data-icon="mark" data-size="76"></div>
+    <div class="boot-name">Radon<span>OS</span></div>
+    <div class="boot-bar"><span></span></div>
+    <div class="boot-meta">Halogen 1.0 · Local session</div>
+  </div>
+
+  <div class="wallpaper" id="wallpaper" aria-hidden="true"></div>
+  <div class="wallpaper-shade" aria-hidden="true"></div>
+  <div class="wallpaper-grain" aria-hidden="true"></div>
+
+  <!-- Desktop -->
+  <main class="desktop" id="desktop" aria-label="Desktop">
+    <div class="icon-surface" id="icon-surface" role="list" aria-label="Desktop shortcuts"></div>
+    <aside class="widgets" id="widgets" aria-label="Widgets"></aside>
+    <div class="marquee" id="marquee" hidden></div>
+  </main>
+
+  <!-- Floating windows live here; the layer stops above the taskbar -->
+  <div class="window-layer" id="window-layer"></div>
+  <div class="snap-preview" id="snap-preview" hidden aria-hidden="true"></div>
+
+  <!-- Popovers (calendar, volume, battery, notifications, performance) -->
+  <div class="popover-layer" id="popover-layer"></div>
+
+  <!-- Universal command bar (Super + Space / Ctrl + K) -->
+  <div class="cmdk-backdrop" id="command-bar" hidden>
+    <div class="cmdk" role="dialog" aria-modal="true" aria-label="Command bar">
+      <div class="cmdk-head">
+        <span class="cmdk-glyph" data-icon="search" data-size="18"></span>
+        <input class="cmdk-input" id="cmdk-input" type="text" autocomplete="off" spellcheck="false"
+          placeholder="Search apps, windows, files and commands…" aria-label="Search RadonOS"
+          role="combobox" aria-expanded="true" aria-controls="cmdk-results">
+        <kbd class="ros-kbd">Esc</kbd>
+      </div>
+      <div class="cmdk-results" id="cmdk-results" role="listbox" aria-label="Results"></div>
+      <footer class="cmdk-foot">
+        <span><kbd>↑</kbd> <kbd>↓</kbd> navigate</span>
+        <span><kbd>↵</kbd> run</span>
+        <span><kbd>Tab</kbd> cycle</span>
+        <span class="ros-spacer"></span>
+        <span id="cmdk-count" class="cmdk-count">0 results</span>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Quick settings / control center -->
+  <aside class="control-center" id="control-center" hidden aria-label="Control center" role="dialog"></aside>
+
+  <!-- Brightness overlay (never intercepts pointer events) -->
+  <div class="display-shade" id="display-shade" aria-hidden="true"></div>
+
+  <!-- Taskbar -->
+  <footer class="taskbar" id="taskbar" aria-label="Taskbar">
+    <div class="tb-section tb-left">
+      <button class="tb-btn start-button" id="start-button" title="Start menu (Alt+Space)" aria-haspopup="true" aria-expanded="false">
+        <span class="start-mark" data-icon="mark" data-size="28"></span>
+      </button>
+      <button class="tb-search" id="taskbar-search" title="Search apps and files">
+        <span data-icon="search" data-size="15"></span>
+        <span class="tb-search-label">Search</span>
+        <kbd>Alt+Space</kbd>
+      </button>
+    </div>
+
+    <div class="tb-section tb-center" id="taskbar-apps" aria-label="Running apps"></div>
+
+    <div class="tb-section tb-right">
+      <button class="tb-btn tray-btn" id="tray-memory" title="Performance">
+        <span data-icon="cpu" data-size="17"></span>
+      </button>
+      <button class="tb-btn tray-btn" id="tray-volume" title="Volume">
+        <span data-icon="volume" data-size="17"></span>
+      </button>
+      <button class="tb-btn tray-btn battery-btn" id="tray-battery" title="Battery">
+        <span data-icon="battery" data-size="17"></span>
+        <span class="battery-label" id="battery-label">100%</span>
+      </button>
+      <button class="tb-btn tray-btn" id="tray-control" title="Control center" aria-haspopup="true" aria-expanded="false">
+        <span data-icon="sliders" data-size="17"></span>
+      </button>
+      <button class="tb-btn tray-btn" id="tray-theme" title="Toggle light / dark theme">
+        <span data-icon="moon" data-size="17"></span>
+      </button>
+      <button class="tb-btn tray-btn" id="tray-bell" title="Notifications">
+        <span data-icon="bell" data-size="17"></span>
+        <span class="tray-dot" id="tray-dot" hidden></span>
+      </button>
+      <button class="tb-clock" id="tray-clock" title="Calendar">
+        <span class="clock-time" id="clock-time">--:--</span>
+        <span class="clock-date" id="clock-date">&nbsp;</span>
+      </button>
+      <button class="tb-btn show-desktop" id="show-desktop" title="Show desktop" aria-label="Show desktop"></button>
+    </div>
+  </footer>
+
+  <!-- Start menu -->
+  <div class="start-menu" id="start-menu" hidden role="menu" aria-label="Start menu">
+    <header class="start-head">
+      <div class="start-brand">
+        <span class="start-brand-mark" data-icon="mark" data-size="34"></span>
+        <div class="start-brand-text">
+          <strong>RadonOS</strong>
+          <span>Halogen 1.0</span>
+        </div>
+      </div>
+      <span class="start-session" id="start-session">Local session</span>
+    </header>
+
+    <div class="start-search">
+      <span data-icon="search" data-size="16"></span>
+      <input id="start-search" class="ros-input flat" type="text" placeholder="Search apps, files and actions" autocomplete="off" spellcheck="false" aria-label="Search">
+      <kbd class="ros-kbd">Enter</kbd>
+    </div>
+
+    <div class="start-body">
+      <div id="start-default">
+        <div class="start-section-head">
+          <span>Applications</span>
+          <span class="start-section-hint">Pinned</span>
+        </div>
+        <div class="start-apps" id="start-apps"></div>
+      </div>
+      <div class="start-results" id="start-results" hidden></div>
+    </div>
+
+    <footer class="start-foot">
+      <button class="start-user" id="start-user">
+        <span class="start-avatar" id="start-avatar">RU</span>
+        <span class="start-user-text">
+          <strong id="start-username">Radon User</strong>
+          <small>Local · Offline-ready</small>
+        </span>
+      </button>
+      <div class="start-actions">
+        <button class="tb-btn" data-action="theme" title="Toggle theme"><span data-icon="moon" data-size="17"></span></button>
+        <button class="tb-btn" data-action="settings" title="Settings"><span data-icon="settings" data-size="17"></span></button>
+        <button class="tb-btn" data-action="about" title="About RadonOS"><span data-icon="info" data-size="17"></span></button>
+        <button class="tb-btn" data-action="lock" title="Lock screen"><span data-icon="lock" data-size="17"></span></button>
+        <button class="tb-btn" data-action="restart" title="Restart RadonOS"><span data-icon="power" data-size="17"></span></button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Lock screen -->
+  <div class="lock-screen" id="lock-screen" hidden>
+    <div class="lock-inner">
+      <div class="lock-time" id="lock-time">--:--</div>
+      <div class="lock-date" id="lock-date"></div>
+      <div class="lock-user">
+        <span class="lock-avatar" id="lock-avatar">RU</span>
+        <span id="lock-username">Radon User</span>
+      </div>
+      <div class="lock-hint">Click anywhere or press any key to unlock</div>
+    </div>
+  </div>
+
+  <div class="ros-toast-stack" id="os-toasts"></div>
+
+  <script type="module" src="boot.js"></script>
+</body>
+</html>

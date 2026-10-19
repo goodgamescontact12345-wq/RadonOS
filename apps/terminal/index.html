@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Terminal</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="app term-app">
+  <div class="app-toolbar">
+    <span class="app-title">radon@os</span>
+    <span class="app-sub" id="cwd-label">~/</span>
+    <span class="ros-spacer"></span>
+    <button class="ros-btn sm ghost" id="btn-help">help</button>
+    <button class="ros-btn sm ghost" id="btn-files">files</button>
+    <button class="ros-btn sm ghost" id="btn-clear">clear</button>
+  </div>
+
+  <div class="term-scroll" id="term-output" tabindex="-1"></div>
+
+  <div class="term-input-row">
+    <span class="who">radon</span><span class="sigil">@</span><span class="who">os</span>
+    <span class="cwd" id="prompt-cwd">~</span>
+    <span class="sigil">$</span>
+    <input class="term-input" id="term-input" autocomplete="off" spellcheck="false" autocapitalize="off" aria-label="Command input" placeholder="type help and press Enter">
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

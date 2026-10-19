@@ -1,0 +1,111 @@
+/** App registry: the single catalogue used by desktop, start menu and terminal. */
+export const APPS = [
+  {
+    id: 'explorer',
+    name: 'Files',
+    description: 'Browse the virtual file system',
+    icon: 'folder',
+    color: '#f5b83d',
+    src: '../apps/explorer/index.html',
+    width: 1020,
+    height: 650,
+    minWidth: 700,
+    minHeight: 440,
+    singleton: true,
+    category: 'System',
+    keywords: 'files folders documents pictures drive storage',
+  },
+  {
+    id: 'notepad',
+    name: 'Notepad',
+    description: 'Write notes straight into RadonOS',
+    icon: 'file-text',
+    color: '#2dd4bf',
+    src: '../apps/notepad/index.html',
+    width: 780,
+    height: 580,
+    minWidth: 460,
+    minHeight: 340,
+    singleton: false,
+    category: 'Productivity',
+    keywords: 'text editor notes markdown write',
+  },
+  {
+    id: 'terminal',
+    name: 'Terminal',
+    description: 'Command line access to RadonOS',
+    icon: 'terminal',
+    color: '#22c55e',
+    src: '../apps/terminal/index.html',
+    width: 800,
+    height: 540,
+    minWidth: 520,
+    minHeight: 320,
+    singleton: false,
+    category: 'System',
+    keywords: 'shell command prompt cli console',
+  },
+  {
+    id: 'browser',
+    name: 'Browser',
+    description: 'A mini browser with quick links',
+    icon: 'globe',
+    color: '#3b82f6',
+    src: '../apps/browser/index.html',
+    width: 1060,
+    height: 700,
+    minWidth: 620,
+    minHeight: 380,
+    singleton: false,
+    category: 'Internet',
+    keywords: 'web internet url site http',
+  },
+  {
+    id: 'media',
+    name: 'Media',
+    description: 'Play music and video from your files',
+    icon: 'play',
+    color: '#ec4899',
+    src: '../apps/media/index.html',
+    width: 940,
+    height: 620,
+    minWidth: 620,
+    minHeight: 420,
+    singleton: true,
+    category: 'Media',
+    keywords: 'music audio video player songs movies',
+  },
+  {
+    id: 'settings',
+    name: 'Settings',
+    description: 'Personalise your desktop',
+    icon: 'settings',
+    color: '#8b5cf6',
+    src: '../apps/settings/index.html',
+    width: 960,
+    height: 650,
+    minWidth: 660,
+    minHeight: 440,
+    singleton: true,
+    category: 'System',
+    keywords: 'preferences wallpaper theme accent storage about',
+  },
+];
+
+export const APP_MAP = new Map(APPS.map((app) => [app.id, app]));
+
+export function getApp(id) {
+  return APP_MAP.get(id) || null;
+}
+
+export const QUICK_LINKS = [
+  { name: 'Photopea', url: 'https://www.photopea.com', icon: 'image', color: '#3b82f6', note: 'Photo editor' },
+  { name: 'Excalidraw', url: 'https://excalidraw.com', icon: 'edit', color: '#a78bfa', note: 'Whiteboard' },
+  { name: 'Spotify', url: 'https://open.spotify.com', icon: 'music', color: '#22c55e', note: 'Music' },
+  { name: 'Wikipedia', url: 'https://wikipedia.org', icon: 'globe', color: '#94a3b8', note: 'Knowledge' },
+  { name: 'YouTube', url: 'https://www.youtube.com', icon: 'video', color: '#ef4444', note: 'Video' },
+  { name: 'GitHub', url: 'https://github.com', icon: 'terminal', color: '#e5e7eb', note: 'Code' },
+];
+
+export const OS_VERSION = '1.0.0';
+export const OS_CODENAME = 'Halogen';

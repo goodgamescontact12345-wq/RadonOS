@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Browser</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="app">
+  <div class="app-toolbar">
+    <button class="ros-btn icon ghost" id="nav-back" data-icon="chevron-left" data-size="17" title="Back"></button>
+    <button class="ros-btn icon ghost" id="nav-forward" data-icon="chevron-right" data-size="17" title="Forward"></button>
+    <button class="ros-btn icon ghost" id="nav-reload" data-icon="refresh" data-size="16" title="Reload"></button>
+    <button class="ros-btn icon ghost" id="nav-home" data-icon="home" data-size="16" title="Home"></button>
+    <div class="address-shell" id="address-shell">
+      <span class="address-lock" id="address-status" data-icon="globe" data-size="14"></span>
+      <input id="address" type="text" spellcheck="false" autocomplete="off" placeholder="Search the web or enter an address" aria-label="Address">
+      <span class="address-loading" id="address-loading" hidden><span class="ros-spinner" style="width:13px;height:13px;border-width:2px"></span></span>
+    </div>
+    <button class="ros-btn sm icon" id="go" data-icon="arrow-right" data-size="16" title="Go"></button>
+    <button class="ros-btn sm icon ghost" id="bookmark" data-icon="star" data-size="16" title="Save bookmark"></button>
+    <button class="ros-btn sm icon ghost" id="external" data-icon="external" data-size="16" title="Open in a real tab"></button>
+  </div>
+
+  <div class="app-body" id="browser-body">
+    <div class="panel">
+      <div class="banner" id="embed-warning" hidden>
+        <span data-icon="alert" data-size="15"></span>
+        <span>This site may refuse to be embedded in a frame.</span>
+        <span class="ros-spacer"></span>
+        <button class="ros-btn sm ghost" id="warning-external">Open in a real tab</button>
+      </div>
+
+      <div class="browser-home" id="home">
+        <div class="home-inner">
+          <div class="home-hero">
+            <span class="home-mark" data-icon="mark" data-size="46"></span>
+            <div>
+              <div class="home-title">RadonOS Browser</div>
+              <div class="ros-hint">Type an address above, or jump to a web app that embeds cleanly.</div>
+            </div>
+          </div>
+          <div class="quick-grid" id="quick-grid"></div>
+          <div class="home-note">
+            <span data-icon="info" data-size="15"></span>
+            <span>Some large sites (Google, YouTube, GitHub…) block being framed. RadonOS detects them and offers to open a real tab instead.</span>
+          </div>
+        </div>
+      </div>
+
+      <iframe id="frame" class="browser-frame" hidden
+        referrerpolicy="no-referrer"
+        sandbox="allow-scripts allow-forms allow-popups allow-downloads allow-same-origin allow-popups-to-escape-sandbox"></iframe>
+
+      <div class="blocked-panel" id="blocked" hidden>
+        <div class="blocked-card">
+          <span class="blocked-icon" data-icon="shield" data-size="26"></span>
+          <div class="blocked-title">This site can’t run inside RadonOS</div>
+          <p class="ros-hint" id="blocked-text">The site sends an <code>X-Frame-Options</code> /
+          <code>Content-Security-Policy</code> header that forbids embedding, so the browser
+          refuses to render it in a window frame.</p>
+          <div class="blocked-actions">
+            <button class="ros-btn primary" id="blocked-external"><span data-icon="external" data-size="15"></span> Open in a real tab</button>
+            <button class="ros-btn ghost" id="blocked-try">Try to embed anyway</button>
+            <button class="ros-btn ghost" id="blocked-copy"><span data-icon="copy" data-size="15"></span> Copy URL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-status">
+    <span id="status-text">Ready</span>
+    <span class="ros-spacer"></span>
+    <span id="status-url"></span>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

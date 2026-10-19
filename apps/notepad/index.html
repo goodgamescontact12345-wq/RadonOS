@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notepad</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="app">
+  <div class="app-toolbar">
+    <button class="ros-btn sm" id="new" title="New document (Ctrl+N)"><span data-icon="file-plus" data-size="15"></span> New</button>
+    <button class="ros-btn sm" id="open" title="Open a file from RadonOS (Ctrl+O)"><span data-icon="folder" data-size="15"></span> Open</button>
+    <button class="ros-btn sm primary" id="save" title="Save (Ctrl+S)"><span data-icon="save" data-size="15"></span> Save</button>
+    <button class="ros-btn sm icon" id="save-as" data-icon="copy" data-size="15" title="Save as copy"></button>
+    <div class="tb-sep"></div>
+    <button class="ros-btn sm icon ghost" id="download" data-icon="download" data-size="16" title="Download to your computer"></button>
+    <button class="ros-btn sm icon ghost" id="reveal" data-icon="folder" data-size="16" title="Show in Files"></button>
+    <div class="tb-sep"></div>
+    <button class="ros-btn sm icon ghost active" id="wrap" data-icon="list" data-size="16" title="Toggle word wrap"></button>
+    <button class="ros-btn sm icon ghost" id="font" data-icon="edit" data-size="16" title="Toggle monospace / sans font"></button>
+    <span class="ros-spacer"></span>
+    <input class="ros-input" id="filename" placeholder="Untitled.txt" spellcheck="false" aria-label="File name" style="width:210px;height:32px">
+  </div>
+
+  <div class="app-body">
+    <div class="editor-shell">
+      <textarea id="editor" class="editor wrap" spellcheck="false" placeholder="Start typing… your work stays on this device."></textarea>
+    </div>
+  </div>
+
+  <div class="app-status">
+    <span id="stat-path">Not saved yet</span>
+    <span class="ros-spacer"></span>
+    <span id="stat-state"></span>
+    <span id="stat-stats"></span>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="app">
+  <div class="app-toolbar">
+    <span class="app-title" id="section-title">Appearance</span>
+    <span class="app-sub" id="section-sub">Wallpaper, accent colour and theme</span>
+    <span class="ros-spacer"></span>
+    <button class="ros-btn sm ghost" id="open-about"><span data-icon="info" data-size="15"></span> About RadonOS</button>
+  </div>
+
+  <div class="app-body">
+    <aside class="sidebar settings-nav" id="nav"></aside>
+    <section class="panel">
+      <div class="settings-crumb" id="crumb" hidden></div>
+      <div class="scroll" id="pane"></div>
+    </section>
+  </div>
+
+  <div class="app-status">
+    <span id="status-hint">Settings are saved instantly and shared with every RadonOS window.</span>
+    <span class="ros-spacer"></span>
+    <span id="status-version"></span>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

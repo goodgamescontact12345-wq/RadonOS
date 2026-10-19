@@ -1,0 +1,348 @@
+/* =====================================================================
+   FILE: shared/themeEngine.css
+
+   The design-system layer that every RadonOS page imports through
+   shared/base.css. One visual language for the desktop, every window,
+   every menu and every control:
+
+     - deep petrol/navy glass surfaces, hairline edges, 20px cards
+     - small uppercase section labels with wide tracking
+     - pill-shaped controls, soft translucent fills
+     - vivid gradient app tiles with a white glyph
+     - one radius scale (8 / 10 / 14 / 20 / 24)
+
+   Load order matters: this file is @import-ed at the very top of
+   base.css, so palette rules use attribute selectors strong enough to
+   win over the base :root tokens regardless of source order.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------- glass */
+:root {
+  --glass-blur: 28px;
+  --glass-sat: 1.4;
+  --glass-tint: color-mix(in srgb, var(--surface-solid) 64%, transparent);
+  --glass-tint-strong: color-mix(in srgb, var(--surface-solid) 86%, transparent);
+  --glass-edge: rgba(255, 255, 255, .08);
+  --glass-sheen: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, .10) 0%,
+    rgba(255, 255, 255, .02) 40%,
+    rgba(255, 255, 255, 0) 62%,
+    rgba(255, 255, 255, .045) 100%
+  );
+  --glass-stroke: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, .26),
+    rgba(255, 255, 255, .03) 44%,
+    rgba(255, 255, 255, .02) 62%,
+    rgba(255, 255, 255, .13)
+  );
+  --display-shade: 0;
+}
+
+[data-theme="light"] {
+  --glass-edge: rgba(13, 23, 38, .08);
+  --glass-sheen: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, .9) 0%,
+    rgba(255, 255, 255, .34) 45%,
+    rgba(255, 255, 255, .08) 100%
+  );
+  --glass-stroke: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, .95),
+    rgba(13, 23, 38, .06) 42%,
+    rgba(13, 23, 38, .04) 64%,
+    rgba(255, 255, 255, .8)
+  );
+}
+
+/* Users can turn the effect off entirely (low-end GPUs, readability). */
+[data-glass="flat"] {
+  --glass-blur: 0px;
+  --glass-sat: 1;
+  --glass-sheen: none;
+}
+
+/* --------------------------------------------------------- palettes: dark */
+:root[data-palette="midnight"] {
+  --bg: #071522;
+  --bg-2: #0a1e2f;
+  --surface: rgba(10, 24, 40, .60);
+  --surface-2: rgba(19, 37, 57, .68);
+  --surface-solid: #0a1929;
+  --window-bg: rgba(7, 17, 30, .90);
+  --border: rgba(255, 255, 255, .07);
+  --border-strong: rgba(255, 255, 255, .13);
+}
+
+:root[data-palette="lavender"] {
+  --bg: #0d0f1f;
+  --bg-2: #151831;
+  --surface: rgba(22, 26, 48, .62);
+  --surface-2: rgba(33, 38, 66, .70);
+  --surface-solid: #141830;
+  --window-bg: rgba(12, 14, 29, .90);
+  --border: rgba(199, 205, 255, .10);
+  --border-strong: rgba(199, 205, 255, .20);
+}
+
+:root[data-palette="sage"] {
+  --bg: #071a19;
+  --bg-2: #0c2624;
+  --surface: rgba(13, 35, 33, .62);
+  --surface-2: rgba(21, 48, 45, .70);
+  --surface-solid: #0e2322;
+  --window-bg: rgba(9, 26, 25, .90);
+  --border: rgba(180, 240, 220, .10);
+  --border-strong: rgba(180, 240, 220, .20);
+}
+
+:root[data-palette="peach"] {
+  --bg: #1a1310;
+  --bg-2: #261a15;
+  --surface: rgba(42, 29, 24, .62);
+  --surface-2: rgba(56, 39, 32, .70);
+  --surface-solid: #1f1714;
+  --window-bg: rgba(28, 19, 15, .90);
+  --border: rgba(255, 205, 170, .12);
+  --border-strong: rgba(255, 205, 170, .24);
+}
+
+/* -------------------------------------------------------- palettes: light */
+[data-theme="light"][data-palette="midnight"] {
+  --bg: #eef3f7;
+  --bg-2: #e2eaf1;
+  --surface: rgba(255, 255, 255, .74);
+  --surface-2: rgba(255, 255, 255, .93);
+  --surface-solid: #f7fafc;
+  --window-bg: rgba(249, 251, 253, .94);
+  --border: rgba(13, 30, 45, .10);
+  --border-strong: rgba(13, 30, 45, .20);
+}
+
+[data-theme="light"][data-palette="lavender"] {
+  --bg: #f3f1fc;
+  --bg-2: #e7e3f7;
+  --surface: rgba(255, 255, 255, .76);
+  --surface-2: rgba(255, 255, 255, .94);
+  --surface-solid: #faf8ff;
+  --window-bg: rgba(251, 249, 255, .95);
+  --border: rgba(76, 46, 132, .12);
+  --border-strong: rgba(76, 46, 132, .22);
+}
+
+[data-theme="light"][data-palette="sage"] {
+  --bg: #edf5f0;
+  --bg-2: #dfece5;
+  --surface: rgba(255, 255, 255, .76);
+  --surface-2: rgba(255, 255, 255, .94);
+  --surface-solid: #f8fcf9;
+  --window-bg: rgba(249, 253, 250, .95);
+  --border: rgba(20, 62, 45, .12);
+  --border-strong: rgba(20, 62, 45, .22);
+}
+
+[data-theme="light"][data-palette="peach"] {
+  --bg: #fdf4ee;
+  --bg-2: #f6e7db;
+  --surface: rgba(255, 255, 255, .78);
+  --surface-2: rgba(255, 255, 255, .95);
+  --surface-solid: #fffaf6;
+  --window-bg: rgba(255, 251, 248, .96);
+  --border: rgba(94, 48, 24, .13);
+  --border-strong: rgba(94, 48, 24, .23);
+}
+
+/* ---------------------------------------------------------- surfaces */
+.ros-glass {
+  position: relative;
+  background: var(--glass-tint);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+/* A 1px gradient rim, painted above the fill but below the content. */
+.ros-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--glass-stroke);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: .7;
+}
+
+.ros-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-sheen);
+  pointer-events: none;
+  opacity: .45;
+}
+
+.ros-glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* The one card recipe used by widgets, settings groups and app panels. */
+.ros-card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+/* Section labels: WEER / NOTITIES / FAVORIETEN rhythm. */
+.ros-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ---------------------------------------------------------- app tiles */
+/* Vivid rounded-square tile shared by desktop icons, the start menu and
+   anywhere else an app needs its identity mark. --tile-color comes from
+   shared/registry.js. */
+.ros-tile {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background:
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--tile-color, #5b9dff) 74%, #ffffff) 0%,
+      var(--tile-color, #5b9dff) 48%,
+      color-mix(in srgb, var(--tile-color, #5b9dff) 78%, #04101d) 100%);
+  box-shadow:
+    0 10px 24px color-mix(in srgb, var(--tile-color, #5b9dff) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .38),
+    inset 0 -1px 0 rgba(0, 0, 0, .18);
+}
+
+[data-theme="light"] .ros-tile {
+  box-shadow:
+    0 8px 20px color-mix(in srgb, var(--tile-color, #5b9dff) 26%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .55);
+}
+
+/* ---------------------------------------------------------------- ranges */
+.ros-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.ros-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 99px;
+  background:
+    linear-gradient(90deg, var(--accent) 0 var(--fill, 50%), transparent var(--fill, 50%)),
+    color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+.ros-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .45), 0 0 0 .5px rgba(0, 0, 0, .12);
+  transition: transform .12s var(--ease);
+}
+
+.ros-range:hover::-webkit-slider-thumb { transform: scale(1.08); }
+.ros-range:active::-webkit-slider-thumb { transform: scale(1.16); }
+.ros-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 99px; }
+.ros-range::-moz-range-track {
+  height: 4px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+.ros-range::-moz-range-progress { height: 4px; border-radius: 99px; background: var(--accent); }
+.ros-range::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
+}
+
+/* -------------------------------------------------------------- segmented */
+.ros-segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border: 1px solid var(--border);
+}
+
+.ros-segmented button {
+  height: 27px;
+  min-width: 46px;
+  padding: 0 11px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--text-dim);
+  transition: background .14s var(--ease), color .14s, box-shadow .14s;
+}
+
+.ros-segmented button:hover { color: var(--text); }
+.ros-segmented button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--text) 13%, transparent);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+
+/* -------------------------------------------------------------- swatches */
+.ros-swatches { display: flex; gap: 9px; flex-wrap: wrap; }
+
+.ros-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  position: relative;
+  transition: transform .12s var(--ease), box-shadow .15s;
+}
+
+.ros-swatch:hover { transform: translateY(-1px); }
+.ros-swatch[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--surface-solid), 0 0 0 4px var(--accent);
+}
+
+.ros-swatch .ros-icon { position: absolute; inset: 0; margin: auto; color: #fff; }
+
+/* --------------------------------------------------------- display shade */
+.display-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: #000;
+  opacity: var(--display-shade, 0);
+  pointer-events: none;
+  transition: opacity .2s var(--ease);
+}

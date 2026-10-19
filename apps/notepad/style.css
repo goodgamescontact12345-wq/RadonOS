@@ -1,0 +1,30 @@
+.editor-shell { background: rgba(255, 255, 255, .008); }
+.editor { caret-color: var(--accent); }
+.editor::placeholder { color: var(--text-faint); }
+
+.ros-btn.active {
+  background: rgba(255, 255, 255, .09);
+  border-color: rgba(255, 255, 255, .07);
+  color: var(--text);
+}
+
+#stat-state.dirty { color: var(--warning); }
+#stat-state.saved { color: var(--success); }
+#audit { font-variant-numeric: tabular-nums; }
+
+.file-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  text-align: left;
+}
+.file-pick:hover { background: rgba(255, 255, 255, .05); border-color: transparent; }
+.file-pick .file-icon { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+.file-pick-text { display: grid; min-width: 0; }
+.file-pick-name { font-size: 12.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-pick-path { font-size: 11px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-pick-list { display: flex; flex-direction: column; gap: 2px; max-height: 46vh; overflow-y: auto; margin-top: 6px; }

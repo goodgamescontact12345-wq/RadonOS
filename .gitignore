@@ -1,0 +1,8 @@
+node_modules/
+.shots/
+*.crx
+*.pem
+site/dist/
+.wrangler/
+site/.wrangler/
+site/deploy.json

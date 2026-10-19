@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Media</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="app">
+  <div class="app-toolbar">
+    <button class="ros-btn sm" id="add-url"><span data-icon="link" data-size="15"></span> Add stream</button>
+    <button class="ros-btn sm ghost" id="import"><span data-icon="upload" data-size="15"></span> Import media</button>
+    <input type="file" id="file-input" accept="audio/*,video/*" multiple hidden>
+    <div class="tb-sep"></div>
+    <div class="seg" id="filter">
+      <button class="seg-btn active" data-filter="all">All</button>
+      <button class="seg-btn" data-filter="audio">Audio</button>
+      <button class="seg-btn" data-filter="video">Video</button>
+    </div>
+    <span class="ros-spacer"></span>
+    <span class="app-sub" id="now-label">Nothing playing</span>
+  </div>
+
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-title">Playlist</div>
+      <div id="track-list" class="track-list"></div>
+      <div class="sidebar-foot">
+        <div class="ros-hint" id="library-meta">Scanning library…</div>
+      </div>
+    </aside>
+
+    <section class="panel player-panel">
+      <div class="stage" id="stage">
+        <canvas id="viz" class="viz" hidden></canvas>
+        <video id="video" class="video" hidden playsinline controls></video>
+        <iframe id="yt" class="yt" hidden allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="no-referrer"></iframe>
+        <div class="stage-empty" id="stage-empty">
+          <span data-icon="play" data-size="40"></span>
+          <div class="stage-title">No track loaded</div>
+          <div class="ros-hint">Import audio or video files, or add a stream URL. Files stay on this device.</div>
+        </div>
+      </div>
+
+      <div class="now-playing">
+        <div class="np-meta">
+          <div class="np-title" id="np-title">Nothing playing</div>
+          <div class="np-sub" id="np-sub">Pick a track from the playlist</div>
+        </div>
+        <div class="np-controls">
+          <button class="np-btn" id="shuffle" data-icon="shuffle" data-size="17" title="Shuffle"></button>
+          <button class="np-btn" id="prev" data-icon="skip-back" data-size="19" title="Previous"></button>
+          <button class="np-btn play" id="play" data-icon="play" data-size="22" title="Play / pause (Space)"></button>
+          <button class="np-btn" id="next" data-icon="skip-forward" data-size="19" title="Next"></button>
+          <button class="np-btn" id="repeat" data-icon="repeat" data-size="17" title="Repeat"></button>
+        </div>
+        <div class="np-progress">
+          <span class="time" id="cur">0:00</span>
+          <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Seek">
+          <span class="time" id="dur">0:00</span>
+        </div>
+        <div class="np-volume">
+          <span data-icon="volume" data-size="15"></span>
+          <input type="range" id="volume" min="0" max="100" value="80" aria-label="Volume">
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="app-status">
+    <span id="stat-library">0 tracks</span>
+    <span id="stat-source"></span>
+    <span class="ros-spacer"></span>
+    <span id="stat-state">Idle</span>
+  </div>
+
+  <audio id="audio"></audio>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

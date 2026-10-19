@@ -1,0 +1,9 @@
+# Local verification of the hosted build (`npm run site:dev`).
+# The deployed Worker is described by deploy.json, not by this file.
+name = "radonos-site"
+main = "worker.js"
+compatibility_date = "2026-10-18"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"

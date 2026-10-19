@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="RadonOS">
+  <defs>
+    <linearGradient id="radon" x1="6" y1="42" x2="42" y2="6" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3ee0c8"/>
+      <stop offset="0.55" stop-color="#63b1ff"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="24" cy="24" r="16" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38e8ff" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#38e8ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="1" y="1" width="46" height="46" rx="11" fill="#0c1220" stroke="#1d2a44"/>
+  <circle cx="24" cy="24" r="16" fill="url(#glow)"/>
+  <ellipse cx="24" cy="24" rx="16" ry="5.6" transform="rotate(38 24 24)" stroke="url(#radon)" stroke-width="2.1" fill="none"/>
+  <ellipse cx="24" cy="24" rx="16" ry="5.6" transform="rotate(-38 24 24)" stroke="url(#radon)" stroke-width="2.1" fill="none"/>
+  <circle cx="24" cy="24" r="3.4" fill="#f2ffff"/>
+  <circle cx="24" cy="24" r="6.2" stroke="url(#radon)" stroke-width="1" fill="none" opacity="0.45"/>
+</svg>

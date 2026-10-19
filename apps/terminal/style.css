@@ -1,0 +1,30 @@
+.term-app { background: #050f1b; }
+.term-app .app-toolbar { background: #07131f; border-bottom-color: rgba(148, 163, 184, .12); }
+.term-app .app-title { font-family: var(--mono); color: #7dd3fc; letter-spacing: .02em; }
+.term-app .app-sub { font-family: var(--mono); }
+.term-app .ros-btn.sm { font-family: var(--mono); }
+
+.term-scroll::selection, .term-scroll *::selection { background: rgba(124, 245, 208, .3); }
+
+.term-line pre { margin: 0; font-family: var(--mono); font-size: 12px; line-height: 1.35; white-space: pre; }
+
+.term-echo { color: #94a3b8; }
+.term-echo .sigil { color: var(--accent); }
+
+.term-table { display: grid; grid-template-columns: minmax(90px, max-content) 92px 150px 1fr; gap: 2px 12px; font-size: 12px; }
+.term-table .h { color: #64748b; border-bottom: 1px solid rgba(148, 163, 184, .18); padding-bottom: 3px; }
+.term-table .dir { color: #7dd3fc; }
+.term-table .file { color: #cbd5e1; }
+
+.term-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.term-chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, .18);
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, .06);
+  cursor: pointer;
+}
+.term-chip:hover { border-color: var(--accent); color: #eaf4ff; }
