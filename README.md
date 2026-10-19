@@ -12,11 +12,7 @@ Manifest V3 · zero runtime dependencies · offline-first · works in Chrome, Ed
 
 ---
 
-RadonOS was built as the "next step" of the *I Turned My Browser Into an Operating System* concept:
-instead of a page of shortcuts, the new tab becomes a workspace — a wallpaper, a desktop with
-draggable icons, floating app windows you can drag/resize/snap/minimize, a taskbar with a start menu
-and system tray, desktop widgets, and six real applications (Files, Notepad, Terminal, Browser, Media,
-Settings) on top of an IndexedDB virtual file system.
+RadonOS was built as from a youtube video i saw where someone built a basic operating system in a browser, i decided to take it to the next level.
 
 Nothing leaves your machine. There is no backend, no account, no telemetry and no remote asset:
 every icon, sound and wallpaper gradient is generated locally.
