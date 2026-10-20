@@ -117,10 +117,12 @@ How it is published:
   keeping the query string and hash, so `?app=terminal` still deep-links. The script resolves the desktop
   from its own `<script src>`, so it works under a subpath and at any depth; it is external because the
   CSP forbids inline scripts, and both documents carry a `<noscript>` refresh as a fallback.
-- **The base path is baked in.** GitHub Pages serves `404.html` *at the requested URL*, so a relative
-  `redirect.js` inside it would resolve to `/RadonOS/a/b/redirect.js` on a miss below `/a/b/`. The build
-  therefore takes `--base`/`SITE_BASE` (the workflow derives it from the repository name, and passes an
-  empty base for a `<user>.github.io` or custom-domain site). Every other document stays relative.
+- **The base path is baked in — for `404.html` only.** GitHub Pages serves it *at the requested URL*,
+  so a relative `redirect.js` inside it would resolve to `/RadonOS/a/b/redirect.js` on a miss below
+  `/a/b/`. The build therefore takes `--base`/`SITE_BASE`; the workflow derives it from the repository
+  name and switches to the origin root for a `<user>.github.io` page or when the `PAGES_CUSTOM_DOMAIN`
+  variable is set. `index.html` needs no base at all — it is always served from the site root, so its
+  links stay relative and follow the domain on their own. Every app document is relative too.
 - **`.nojekyll`** — the artifact is published verbatim, and this also keeps `_`-prefixed paths intact if
   the site is ever switched to branch publishing.
 - **No server state at all.** Settings, files and wallpapers stay in the visitor's browser; Pages only
@@ -129,6 +131,32 @@ How it is published:
 The policy keeps `frame-src *` and `style-src 'unsafe-inline'` because the desktop embeds its own apps in
 same-origin iframes and themes itself with inline custom properties. `frame-ancestors` cannot be expressed
 in a meta tag, so on GitHub Pages it is simply absent.
+
+### Changing the URL
+
+The deployment follows the repository, so the two common moves need no code edit — rename the repository
+and the next push rebuilds with the new base path:
+
+| You want | Do this |
+| --- | --- |
+| A different project path, `/<repo>/` | Rename the repository. The workflow recomputes the base from the name, and the site moves with it. |
+| An origin-root site, `https://<user>.github.io/` | Name the repository `<user>.github.io`; the workflow then builds with an empty base. |
+| Your own domain, e.g. `radon.os` | **Settings → Pages → Custom domain**, add the DNS records below, enable *Enforce HTTPS*, then set the `PAGES_CUSTOM_DOMAIN` repository variable (**Settings → Secrets and variables → Actions → Variables**) so `404.html` stops prefixing `/RadonOS/`. |
+
+DNS for a custom domain, pointing at GitHub Pages:
+
+- **Subdomain** (`os.example.com`): a `CNAME` record to `<user>.github.io`.
+- **Apex/root** (`example.com`): `A` records to `185.199.108.153`, `185.199.109.153`, `185.199.110.153`,
+  `185.199.111.153`, plus `AAAA` records to `2606:50c0:8000::153`, `2606:50c0:8001::153`,
+  `2606:50c0:8002::153`, `2606:50c0:8003::153` — or an `ALIAS`/`ANAME` to `<user>.github.io` if your
+  DNS provider supports it.
+
+After the domain is verified and *Enforce HTTPS* is on, GitHub serves the site from the new domain and
+redirects the old `github.io` URL to it. Then redeploy (push, or *Re-run all jobs*) so the 404 page picks
+up the root base, and update the links in this README.
+
+> The virtual file system and settings live in the browser's per-origin storage, so they do **not** follow
+the site to a new domain — export from **Settings → Storage** beforehand if you want to carry data over.
 
 **Troubleshooting**
 

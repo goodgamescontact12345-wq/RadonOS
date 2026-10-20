@@ -14,14 +14,15 @@
  * waits on a Jekyll build. Nothing from `tools/`, `site/`, the extension
  * manifest or the node_modules tree is published.
  *
- * The two generated documents are the only place a path has to be absolute:
- * GitHub Pages serves `404.html` **at the requested URL**, so a relative
- * `redirect.js` in it would resolve to `/RadonOS/a/b/redirect.js` on a miss
- * below `/a/b/`. The site root is therefore baked in at build time.
+ * `index.html` always sits at the site root, so its links are relative and it
+ * needs nothing baked in. `404.html` is the exception: GitHub Pages serves it
+ * **at the requested URL**, so a relative `redirect.js` in it would resolve to
+ * `/RadonOS/a/b/redirect.js` on a miss below `/a/b/`. Its paths are absolute,
+ * and that base is a build input.
  *
- *   node tools/build-site.mjs                    # root of the origin (user page, custom domain)
- *   node tools/build-site.mjs --base /RadonOS    # project page: /<repo>/
- *   SITE_BASE=/RadonOS node tools/build-site.mjs # same, for CI
+ *   node tools/build-site.mjs                       # origin root (user page, custom domain)
+ *   node tools/build-site.mjs --base /RadonOS       # project page: /<repo>/
+ *   SITE_BASE=/RadonOS node tools/build-site.mjs    # same, for CI
  */
 import { cp, mkdir, readFile, rm, stat, writeFile, readdir } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
@@ -75,8 +76,16 @@ async function walk(dir, out = []) {
  * src, which is what makes the `/RadonOS/` project-page subpath work. The root
  * document also gets a meta-refresh fallback for visitors without JavaScript.
  */
-function redirectPage({ title }) {
-  const desktop = `${BASE}/newtab/`;
+/**
+ * @param {object} options
+ * @param {string} options.title
+ * @param {boolean} options.absolute  Root the links at the site root instead of
+ *   this document's own directory (needed only for `404.html`).
+ */
+function redirectPage({ title, absolute }) {
+  const root = absolute ? BASE : '.';
+  const desktop = `${root}/newtab/`;
+  const script = `${root}/redirect.js`;
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -84,7 +93,7 @@ function redirectPage({ title }) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>
     <noscript><meta http-equiv="refresh" content="0; url=${desktop}"></noscript>
-    <script src="${BASE}/redirect.js"></script>
+    <script src="${script}"></script>
   </head>
   <body>
     <p>Starting RadonOS…</p>
@@ -105,8 +114,10 @@ async function main() {
     await cp(join(SITE, file), join(DIST, file));
   }
 
-  await writeFile(join(DIST, 'index.html'), redirectPage({ title: 'RadonOS' }));
-  await writeFile(join(DIST, '404.html'), redirectPage({ title: 'RadonOS — not found' }));
+  // `index.html` is always served from the site root, so it stays relative and
+  // keeps working on a custom domain with no extra configuration.
+  await writeFile(join(DIST, 'index.html'), redirectPage({ title: 'RadonOS', absolute: false }));
+  await writeFile(join(DIST, '404.html'), redirectPage({ title: 'RadonOS — not found', absolute: true }));
   await writeFile(join(DIST, '.nojekyll'), '');
 
   const files = await walk(DIST);

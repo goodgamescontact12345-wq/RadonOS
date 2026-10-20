@@ -33,13 +33,17 @@ jobs:
         with:
           node-version: 20
 
-      # A project page lives at /<repo>/, a <user>.github.io page at the origin
-      # root. The generated 404 document needs that path baked in, because
-      # GitHub Pages serves it at the requested URL rather than at /404.html.
+      # A project page lives at /<repo>/, while a <user>.github.io page or a
+      # custom domain lives at the origin root. The generated 404 document needs
+      # that path baked in, because GitHub Pages serves it at the requested URL
+      # rather than at /404.html. Renaming the repository needs no edit here;
+      # attaching a custom domain means setting the PAGES_CUSTOM_DOMAIN
+      # repository variable (Settings → Secrets and variables → Actions).
       - name: Work out the Pages base path
         id: base
         run: |
-          if [ "${GITHUB_REPOSITORY#*/}" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
+          if [ -n "${{ vars.PAGES_CUSTOM_DOMAIN }}" ] \
+             || [ "${GITHUB_REPOSITORY#*/}" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
             echo "base=" >> "$GITHUB_OUTPUT"
           else
             echo "base=/${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
