@@ -67,10 +67,10 @@ check(deep.response.status === 200 && deep.body.includes('redirect.js'), 'deep l
 const script = await get('/redirect.js');
 check(script.response.status === 200 && script.type.includes('javascript'), 'redirect script is served', script.type);
 
-// Run the redirect script against stubs to prove where it actually sends the
-// visitor: the desktop relative to the script (not the origin), path intact
-// and query/hash carried over.
-const redirectSource = await readFile(join(DIST, 'redirect.js'), 'utf8');
+// Run the redirect script the server actually sent (not the local copy) against
+// stubs, to prove where it sends the visitor: the desktop relative to the
+// script, path intact, query and hash carried over.
+const redirectSource = script.body || await readFile(join(DIST, 'redirect.js'), 'utf8');
 function redirectTo(pageUrl) {
   const page = new URL(pageUrl);
   // The script is fetched from the site root; it resolves the desktop from
