@@ -86,9 +86,12 @@ function redirectTo(pageUrl) {
   new Function('document', 'location', redirectSource)({ currentScript: { src: scriptUrl } }, location);
   return target;
 }
-check(redirectTo('https://user.github.io/RadonOS/') === 'https://user.github.io/RadonOS/newtab/', 'root redirect lands on the desktop', redirectTo('https://user.github.io/RadonOS/'));
-check(redirectTo('https://user.github.io/RadonOS/?app=terminal') === 'https://user.github.io/RadonOS/newtab/?app=terminal', 'deep links keep their query string', redirectTo('https://user.github.io/RadonOS/?app=terminal'));
-check(redirectTo('https://user.github.io/RadonOS/a/b/c#frag') === 'https://user.github.io/RadonOS/newtab/#frag', 'the 404 page redirects from any depth', redirectTo('https://user.github.io/RadonOS/a/b/c#frag'));
+// Shape the URLs like the origin being tested, so this works for a project
+// page (/<repo>/) and for an origin root alike.
+const at = (path) => `https://user.github.io${PREFIX}${path}`;
+check(redirectTo(at('/')) === at('/newtab/'), 'root redirect lands on the desktop', redirectTo(at('/')));
+check(redirectTo(`${at('/')}?app=terminal`) === `${at('/newtab/')}?app=terminal`, 'deep links keep their query string', redirectTo(`${at('/')}?app=terminal`));
+check(redirectTo(at('/a/b/c#frag')) === `${at('/newtab/')}#frag`, 'the 404 page redirects from any depth', redirectTo(at('/a/b/c#frag')));
 
 const desktop = await get('/newtab/');
 check(desktop.response.status === 200 && desktop.type.startsWith('text/html'), 'desktop document is served', desktop.type);
@@ -105,9 +108,19 @@ check(guard.response.status === 405, 'writes are rejected', String(guard.respons
 const missing = await get('/shared/definitely-missing.js');
 check(missing.response.status === 404, 'missing assets stay 404s');
 
-const unknownPage = await get('/some/unknown/page', { headers: { accept: 'text/html' } });
+const DEPTH = '/some/unknown/page';
+const unknownPage = await get(DEPTH, { headers: { accept: 'text/html' } });
 check(unknownPage.response.status === 404, 'unknown paths keep the 404 status', String(unknownPage.response.status));
 check(unknownPage.body.includes('redirect.js'), 'unknown paths land on the desktop via 404.html');
+// GitHub Pages serves 404.html *at the requested URL*, so unlike every other
+// document its references must resolve from there, not from its own folder.
+for (const match of unknownPage.body.matchAll(/(?:href|src)="([^"]+)"/g)) {
+  const target = new URL(match[1], `${BASE}${DEPTH}`);
+  const inside = target.pathname.startsWith(`${PREFIX}/`);
+  check(inside, `404 reference ${match[1]} resolves from a deep path`, target.pathname);
+  const { response } = await get(target.pathname.slice(PREFIX.length));
+  check(response.status === 200, `404 reference ${match[1]} loads`, String(response.status));
+}
 
 /* ------------------------------------------------------- documents + links */
 const refs = new Map();
@@ -122,13 +135,15 @@ for (const file of htmlFiles) {
   for (const match of body.matchAll(/(?:href|src)="([^"]+)"/g)) {
     const value = match[1];
     if (/^(https?:|data:|blob:|#|mailto:)/.test(value)) continue;
-    // A project page lives under /<repo>/, so every reference must be relative.
-    if (value.startsWith('/')) absolute.push(`${rel(file)} → ${value}`);
+    // A project page lives under /<repo>/, so every reference must be relative —
+    // except an absolute one rooted at the site's own prefix (the generated
+    // entry documents, which have to be absolute to survive a deep 404).
+    if (value.startsWith('/') && !value.startsWith(`${PREFIX}/`)) absolute.push(`${rel(file)} → ${value}`);
     const resolved = new URL(value, `${BASE}${dir}`);
     refs.set(resolved.pathname.slice(PREFIX.length) || '/', value);
   }
 }
-check(absolute.length === 0, 'documents only use relative URLs (they survive the /<repo>/ subpath)', absolute.join(', '));
+check(absolute.length === 0, 'documents only use relative URLs or the site prefix (so /<repo>/ works)', absolute.join(', '));
 
 for (const [path, from] of refs) {
   // Skip paths that are documents (already checked above).

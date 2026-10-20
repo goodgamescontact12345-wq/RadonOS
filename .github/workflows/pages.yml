@@ -33,9 +33,23 @@ jobs:
         with:
           node-version: 20
 
+      # A project page lives at /<repo>/, a <user>.github.io page at the origin
+      # root. The generated 404 document needs that path baked in, because
+      # GitHub Pages serves it at the requested URL rather than at /404.html.
+      - name: Work out the Pages base path
+        id: base
+        run: |
+          if [ "${GITHUB_REPOSITORY#*/}" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
+            echo "base=" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=/${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+          fi
+
       # RadonOS has no build dependencies: tools/build-site.mjs is plain Node,
       # so there is nothing to install before the build.
       - name: Build the hosted bundle
+        env:
+          SITE_BASE: ${{ steps.base.outputs.base }}
         run: npm run site:build
 
       # Best effort: create the Pages site if it has never been enabled. This

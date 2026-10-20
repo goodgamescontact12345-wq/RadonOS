@@ -10,10 +10,18 @@
  *   redirect.js    the (external) script both of those use, because the CSP
  *                  forbids inline scripts
  *
- * `.nojekyll` keeps GitHub Pages from running Jekyll over the output, so files
- * such as `_headers`-style names would be published verbatim and nothing waits
- * on a Jekyll build. Nothing from `tools/`, `site/`, the extension manifest or
- * the node_modules tree is published.
+ * `.nojekyll` keeps GitHub Pages from running Jekyll over the output, so nothing
+ * waits on a Jekyll build. Nothing from `tools/`, `site/`, the extension
+ * manifest or the node_modules tree is published.
+ *
+ * The two generated documents are the only place a path has to be absolute:
+ * GitHub Pages serves `404.html` **at the requested URL**, so a relative
+ * `redirect.js` in it would resolve to `/RadonOS/a/b/redirect.js` on a miss
+ * below `/a/b/`. The site root is therefore baked in at build time.
+ *
+ *   node tools/build-site.mjs                    # root of the origin (user page, custom domain)
+ *   node tools/build-site.mjs --base /RadonOS    # project page: /<repo>/
+ *   SITE_BASE=/RadonOS node tools/build-site.mjs # same, for CI
  */
 import { cp, mkdir, readFile, rm, stat, writeFile, readdir } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
@@ -23,6 +31,15 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const SITE = join(ROOT, 'site');
 const DIST = join(SITE, 'dist');
+
+/** Where the build is mounted: `''` at the origin root, `/<repo>` on a project page. */
+const BASE = (() => {
+  const index = process.argv.indexOf('--base');
+  const raw = (index >= 0 ? process.argv[index + 1] : process.env.SITE_BASE) || '';
+  const trimmed = raw.trim().replace(/\/+$/, '');
+  if (!trimmed) return '';
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+})();
 
 /** Everything the browser needs at runtime, relative to the project root. */
 const INCLUDE = ['newtab', 'apps', 'shared', 'icons', 'assets'];
@@ -58,18 +75,20 @@ async function walk(dir, out = []) {
  * src, which is what makes the `/RadonOS/` project-page subpath work. The root
  * document also gets a meta-refresh fallback for visitors without JavaScript.
  */
-function redirectPage({ title, fallback }) {
+function redirectPage({ title }) {
+  const desktop = `${BASE}/newtab/`;
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>
-    ${fallback ? '<noscript><meta http-equiv="refresh" content="0; url=./newtab/"></noscript>\n    ' : ''}<script src="redirect.js"></script>
+    <noscript><meta http-equiv="refresh" content="0; url=${desktop}"></noscript>
+    <script src="${BASE}/redirect.js"></script>
   </head>
   <body>
     <p>Starting RadonOS…</p>
-    <p><a href="newtab/">Open the desktop</a></p>
+    <p><a href="${desktop}">Open the desktop</a></p>
   </body>
 </html>
 `;
@@ -86,8 +105,8 @@ async function main() {
     await cp(join(SITE, file), join(DIST, file));
   }
 
-  await writeFile(join(DIST, 'index.html'), redirectPage({ title: 'RadonOS', fallback: true }));
-  await writeFile(join(DIST, '404.html'), redirectPage({ title: 'RadonOS — not found', fallback: false }));
+  await writeFile(join(DIST, 'index.html'), redirectPage({ title: 'RadonOS' }));
+  await writeFile(join(DIST, '404.html'), redirectPage({ title: 'RadonOS — not found' }));
   await writeFile(join(DIST, '.nojekyll'), '');
 
   const files = await walk(DIST);
@@ -120,7 +139,7 @@ async function main() {
   const bytes = (await Promise.all(files.map(async (file) => (await stat(file)).size)))
     .reduce((total, size) => total + size, 0);
 
-  console.log(`Built ${files.length} files · ${(bytes / 1024).toFixed(1)} KiB → site/dist`);
+  console.log(`Built ${files.length} files · ${(bytes / 1024).toFixed(1)} KiB → site/dist (base ${BASE || '/'})`);
   console.log('Publish site/dist as the GitHub Pages artifact (.github/workflows/pages.yml).');
 }
 

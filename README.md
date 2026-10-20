@@ -97,7 +97,8 @@ origin root, so the build only ever emits relative URLs — which also means the
 on a user page, a custom domain or any other static host.
 
 ```bash
-npm run site:build   # assemble site/dist (50 files, ~500 KiB)
+npm run site:build   # assemble site/dist (50 files, ~500 KiB) with the origin root as base
+npm run site:build -- --base /RadonOS   # the project-page shape CI builds
 npm run site:dev     # build, then serve site/dist the way GitHub Pages would, on :8787
 npm run site:test    # crawl that build over HTTP (pass an origin for a deployment)
 node tools/e2e.mjs --url=https://your-deployment/   # full UI suite against a live origin
@@ -114,8 +115,12 @@ How it is published:
 - **`index.html` + `404.html` + `site/redirect.js`** — the only URL behaviour a static host cannot do on
   its own. `/` and unknown paths both load the redirect script, which sends the visitor to `newtab/`
   keeping the query string and hash, so `?app=terminal` still deep-links. The script resolves the desktop
-  from its own `<script src>`, which is what makes the `/RadonOS/` subpath and a 404 at any depth work;
-  it is external because the CSP forbids inline scripts. `index.html` also carries a `<noscript>` refresh.
+  from its own `<script src>`, so it works under a subpath and at any depth; it is external because the
+  CSP forbids inline scripts, and both documents carry a `<noscript>` refresh as a fallback.
+- **The base path is baked in.** GitHub Pages serves `404.html` *at the requested URL*, so a relative
+  `redirect.js` inside it would resolve to `/RadonOS/a/b/redirect.js` on a miss below `/a/b/`. The build
+  therefore takes `--base`/`SITE_BASE` (the workflow derives it from the repository name, and passes an
+  empty base for a `<user>.github.io` or custom-domain site). Every other document stays relative.
 - **`.nojekyll`** — the artifact is published verbatim, and this also keeps `_`-prefixed paths intact if
   the site is ever switched to branch publishing.
 - **No server state at all.** Settings, files and wallpapers stay in the visitor's browser; Pages only
@@ -284,8 +289,8 @@ Everything below is runnable and was executed against this tree.
 | Service worker | `npm run test:sw` | 18 checks against a chrome.* stub: install defaults, alarm + badge clock, four context menus, link/bookmark hand-off, `GET_TABS` filtering, `OPEN_APP`, `NOTIFY`, `SAVE_BOOKMARK` (incl. idempotency), unknown messages, command and toolbar entry points. |
 | Platform layer | `npm run test:platform` | 20 checks covering both branches of `shared/platform.js`: chrome.storage round-trips and change events, tab search/query/open, runtime messaging, extension URL building; then the localStorage/BroadcastChannel fallback used by the dev server. |
 | End-to-end | `npm run e2e:web` | 21 scenario groups in a real headless Chromium driving the actual UI: shell boot, Files listing, Notepad file load, Terminal commands creating real files, window drag/resize/maximize/minimize/focus/work-area clamping, start-menu search across apps/actions/files, tray calendar + notifications + theme persistence + lock screen, full VFS round-trip (create/rename/trash/restore/search), every Settings category drill-down and back, Browser embed detection, Media library + transport, window tiling (halves/quadrants/thirds + `Alt`+`Shift` shortcut), **command-bar ranking/execution/`Super`+`Space`**, **control-center palette + top dock + glass blur persistence**, **storageManager + radonpkg round-trip**, **Terminal `uname`/`vfs`/`radonpkg`**, and session restore after a reload. |
-| Hosted build | `npm run site:test` | 48 checks against a running GitHub Pages build: the `/` redirect document (and its no-JS fallback), the redirect script resolving the desktop **and keeping `?app=`/hash** (executed against stubs, not just grepped), trailing-slash directory redirects, POST rejection, 404s and unknown paths landing on `404.html`, every document and every referenced asset (status + MIME), relative-URL-only documents, no `chrome-extension://` links, no tooling/keys/maps/Worker leftovers, and `.nojekyll` present. |
-| Deployed | `node tools/site-test.mjs <origin>` | The same 48 checks against a live origin, e.g. `https://goodgamescontact12345-wq.github.io/RadonOS`. |
+| Hosted build | `npm run site:test` | 52 checks against a running GitHub Pages build: the `/` redirect document (and its no-JS fallback), the redirect script resolving the desktop **and keeping `?app=`/hash** (executed against stubs, not just grepped), `404.html` references loading **from a deep path**, trailing-slash directory redirects, POST rejection, 404s, every document and every referenced asset (status + MIME), no root-absolute URLs outside the site prefix, no `chrome-extension://` links, no tooling/keys/maps/Worker leftovers, and `.nojekyll` present. |
+| Deployed | `node tools/site-test.mjs <origin>` | The same 52 checks against a live origin, e.g. `https://goodgamescontact12345-wq.github.io/RadonOS`. |
 | End-to-end | `node tools/e2e.mjs --url=<origin>` | The full 16-group UI suite in headless Chromium against a live origin: no console errors, CSP enforced (inline script injection blocked). |
 
 The e2e harness is dependency-free: it launches your installed Chromium with the remote debugging port,
