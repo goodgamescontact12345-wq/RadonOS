@@ -1,0 +1,56 @@
+# Builds the hosted flavour of RadonOS and publishes `site/dist` to GitHub Pages
+# at https://goodgamescontact12345-wq.github.io/RadonOS/.
+#
+# One-time setup: Settings → Pages → Build and deployment → Source:
+# "GitHub Actions". After that every push to main re-deploys automatically.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it mid-upload.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # RadonOS has no build dependencies: tools/build-site.mjs is plain Node,
+      # so there is nothing to install before the build.
+      - name: Build the hosted bundle
+        run: npm run site:build
+
+      # Best effort: create the Pages site if it has never been enabled. This
+      # succeeds with the default GITHUB_TOKEN on repositories where the Actions
+      # app may manage Pages; if it does not, enable Pages once in Settings and
+      # re-run the job.
+      - name: Enable Pages (first run only)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

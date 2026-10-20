@@ -16,13 +16,10 @@
     "e2e:web": "node tools/e2e.mjs --web",
     "e2e:headed": "node tools/e2e.mjs --headed",
     "site:build": "node tools/build-site.mjs",
-    "site:dev": "node tools/build-site.mjs && wrangler dev --config site/wrangler.toml --port 8787",
+    "site:dev": "node tools/build-site.mjs && node tools/serve.mjs --root site/dist --pages --base /RadonOS --port 8787",
     "site:test": "node tools/site-test.mjs"
   },
   "engines": {
     "node": ">=20"
-  },
-  "devDependencies": {
-    "wrangler": "^4.151.1"
   }
 }

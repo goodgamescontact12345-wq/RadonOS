@@ -1,8 +1,0 @@
-# Served by Cloudflare's static-assets layer for every file in the hosted build.
-# RadonOS is an OS shell for arbitrary web content, so frame/media/connect stay
-# open — the CSP here locks down scripts and plugins, which is what matters.
-/*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; media-src * data: blob:; font-src 'self' data:; connect-src *; frame-src *; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
-  Referrer-Policy: no-referrer
-  X-Content-Type-Options: nosniff
-  Permissions-Policy: battery=*, fullscreen=*, microphone=(), camera=()

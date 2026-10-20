@@ -17,10 +17,8 @@ RadonOS was built as from a youtube video i saw where someone built a basic oper
 Nothing leaves your machine. There is no backend, no account, no telemetry and no remote asset:
 every icon, sound and wallpaper gradient is generated locally.
 
-**Try it without installing anything:** <https://site-d2afca87e0e2469086bc0b76d7ae1f91.freebuff.page>
-— the same desktop, hosted as a static app (see [Hosted version](#hosted-version)).
-
-**Want a preview build?** <https://site-ad9971c29b0b49a9a41ba1795caed770.freebuff.page>
+**[Try it without installing anything →](https://goodgamescontact12345-wq.github.io/RadonOS/)** the same
+desktop, published as a static app on GitHub Pages (see [Hosted version](#hosted-version)).
 
 ## Contents
 
@@ -92,36 +90,47 @@ badge clock.
 
 | Environment | URL |
 | --- | --- |
-| Production | <https://site-d2afca87e0e2469086bc0b76d7ae1f91.freebuff.page> |
-| Preview | <https://site-ad9971c29b0b49a9a41ba1795caed770.freebuff.page> |
+| Production (GitHub Pages) | <https://goodgamescontact12345-wq.github.io/RadonOS/> |
+
+The site lives at `https://<user>.github.io/RadonOS/`, i.e. on a **project subpath** rather than an
+origin root, so the build only ever emits relative URLs — which also means the same `site/dist/` works
+on a user page, a custom domain or any other static host.
 
 ```bash
-npm run site:build   # assemble site/dist + site/deploy.json
-npm run site:dev     # build, then serve the Worker + assets in workerd on :8787
-npm run site:test    # crawl the running build over HTTP (add an origin for a deployed one)
+npm run site:build   # assemble site/dist (50 files, ~500 KiB)
+npm run site:dev     # build, then serve site/dist the way GitHub Pages would, on :8787
+npm run site:test    # crawl that build over HTTP (pass an origin for a deployment)
 node tools/e2e.mjs --url=https://your-deployment/   # full UI suite against a live origin
 ```
 
-The hosted build means:
+How it is published:
 
-- **`site/worker.js`** — 60 lines that redirect `/` (and unknown navigations) to the canonical
-  `/newtab/`, preserving `?app=` deep links, and reject non-GET requests. Everything else is served by
-  the platform's static-assets layer.
-- **`site/_headers`** — `frame-ancestors 'self'`, `nosniff`, `Referrer-Policy` and a CSP for hosts that
-  apply header files.
+- **`.github/workflows/pages.yml`** — on every push to `main` (and on demand) it builds the site, uploads
+  `site/dist` as the Pages artifact and deploys it. There is nothing to install: the build is plain Node.
+  One-time setup per repository: **Settings → Pages → Source: GitHub Actions**.
 - **`tools/build-site.mjs`** — copies `newtab/`, `apps/`, `shared/`, `icons/` and `assets/` into
-  `site/dist/`, injects a `<meta>` CSP into every document (so the policy applies even where `_headers`
-  is not honoured), refuses to ship maps/keys/tooling, and writes the deploy manifest.
-- **No server state at all.** Settings, files and wallpapers stay in the visitor's browser; the Worker
-  is stateless and stores nothing. There is no auth, no database and no secret.
+  `site/dist/`, generates the two entry documents, injects a `<meta>` CSP into every document (GitHub
+  Pages cannot send response headers), and refuses to ship maps, keys, the extension manifest or tooling.
+- **`index.html` + `404.html` + `site/redirect.js`** — the only URL behaviour a static host cannot do on
+  its own. `/` and unknown paths both load the redirect script, which sends the visitor to `newtab/`
+  keeping the query string and hash, so `?app=terminal` still deep-links. The script resolves the desktop
+  from its own `<script src>`, which is what makes the `/RadonOS/` subpath and a 404 at any depth work;
+  it is external because the CSP forbids inline scripts. `index.html` also carries a `<noscript>` refresh.
+- **`.nojekyll`** — the artifact is published verbatim, and this also keeps `_`-prefixed paths intact if
+  the site is ever switched to branch publishing.
+- **No server state at all.** Settings, files and wallpapers stay in the visitor's browser; Pages only
+  serves files. There is no auth, no database and no secret.
 
-`frame-ancestors 'self'` rather than `'none'` is deliberate: the desktop embeds its own apps in
-same-origin iframes, so `'none'` blanks every window.
+The policy keeps `frame-src *` and `style-src 'unsafe-inline'` because the desktop embeds its own apps in
+same-origin iframes and themes itself with inline custom properties. `frame-ancestors` cannot be expressed
+in a meta tag, so on GitHub Pages it is simply absent.
 
 **Troubleshooting**
 
 | Symptom | Fix |
 | --- | --- |
+| `https://<user>.github.io/RadonOS/` returns 404 | Pages is not enabled yet: **Settings → Pages → Source: GitHub Actions**, then re-run the `Deploy to GitHub Pages` workflow (a new push works too). |
+| The hosted site still shows an older build | Check the latest `Deploy to GitHub Pages` run in the Actions tab; Pages serves the last successful deployment. |
 | New tabs still show the old page | Another extension is overriding the new tab page (e.g. a theme or a search extension). Disable it, or use step 5 above. |
 | `Service worker (Inactive)` in `chrome://extensions` | Normal for MV3: it starts on demand. Click *Inspect views → service worker* to see its console. |
 | Nothing appears after editing files | Click the ↻ **Reload** button on the RadonOS card in the extensions page. |
@@ -159,7 +168,8 @@ identically while you iterate with hot reload.
 
 ```
 radonos/
-├── site/                    Hosted flavour: worker.js, _headers, wrangler.toml, generated dist/
+├── .github/workflows/pages.yml  Builds site/dist and deploys it to GitHub Pages
+├── site/                    Hosted flavour: redirect.js + generated dist/ (the Pages artifact)
 ├── manifest.json            MV3 manifest: new tab override, action, permissions, commands
 ├── background.js            Service worker: install defaults, context menus, alarms,
 │                            badge clock, notifications, link hand-off, message bridge
@@ -274,8 +284,9 @@ Everything below is runnable and was executed against this tree.
 | Service worker | `npm run test:sw` | 18 checks against a chrome.* stub: install defaults, alarm + badge clock, four context menus, link/bookmark hand-off, `GET_TABS` filtering, `OPEN_APP`, `NOTIFY`, `SAVE_BOOKMARK` (incl. idempotency), unknown messages, command and toolbar entry points. |
 | Platform layer | `npm run test:platform` | 20 checks covering both branches of `shared/platform.js`: chrome.storage round-trips and change events, tab search/query/open, runtime messaging, extension URL building; then the localStorage/BroadcastChannel fallback used by the dev server. |
 | End-to-end | `npm run e2e:web` | 21 scenario groups in a real headless Chromium driving the actual UI: shell boot, Files listing, Notepad file load, Terminal commands creating real files, window drag/resize/maximize/minimize/focus/work-area clamping, start-menu search across apps/actions/files, tray calendar + notifications + theme persistence + lock screen, full VFS round-trip (create/rename/trash/restore/search), every Settings category drill-down and back, Browser embed detection, Media library + transport, window tiling (halves/quadrants/thirds + `Alt`+`Shift` shortcut), **command-bar ranking/execution/`Super`+`Space`**, **control-center palette + top dock + glass blur persistence**, **storageManager + radonpkg round-trip**, **Terminal `uname`/`vfs`/`radonpkg`**, and session restore after a reload. |
-| Hosted build | `npm run site:test` | 36 checks against a running hosted build: `/` redirect + deep-link query preservation, canonical document, POST rejection, 404s, unknown navigations, every document and every referenced asset (status + MIME), no `chrome-extension://` links into the project, no tooling/keys/maps shipped, and a CSP present in headers or meta. |
-| Deployed | `node tools/e2e.mjs --url=<origin>` | The full 16-group UI suite against the live HTTPS deployment: **16/16 on production**, no console errors, CSP enforced (inline script injection blocked). |
+| Hosted build | `npm run site:test` | 48 checks against a running GitHub Pages build: the `/` redirect document (and its no-JS fallback), the redirect script resolving the desktop **and keeping `?app=`/hash** (executed against stubs, not just grepped), trailing-slash directory redirects, POST rejection, 404s and unknown paths landing on `404.html`, every document and every referenced asset (status + MIME), relative-URL-only documents, no `chrome-extension://` links, no tooling/keys/maps/Worker leftovers, and `.nojekyll` present. |
+| Deployed | `node tools/site-test.mjs <origin>` | The same 48 checks against a live origin, e.g. `https://goodgamescontact12345-wq.github.io/RadonOS`. |
+| End-to-end | `node tools/e2e.mjs --url=<origin>` | The full 16-group UI suite in headless Chromium against a live origin: no console errors, CSP enforced (inline script injection blocked). |
 
 The e2e harness is dependency-free: it launches your installed Chromium with the remote debugging port,
 speaks CDP over Node's built-in `WebSocket`, and fails the process when any assertion or page error appears.

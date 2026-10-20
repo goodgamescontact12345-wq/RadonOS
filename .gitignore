@@ -3,6 +3,3 @@ node_modules/
 *.crx
 *.pem
 site/dist/
-.wrangler/
-site/.wrangler/
-site/deploy.json
