@@ -12,7 +12,7 @@ Manifest V3 · zero runtime dependencies · offline-first · works in Chrome, Ed
 
 ---
 
-RadonOS was built as from a youtube video i saw where someone built a basic operating system in a browser, i decided to take it to the next level.
+RadonOS was built as from a youtube video i saw where someone built a basic operating system in a browser, i decided to expand on it, a lot.
 
 Nothing leaves your machine. There is no backend, no account, no telemetry and no remote asset:
 every icon, sound and wallpaper gradient is generated locally.
