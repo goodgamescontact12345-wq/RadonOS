@@ -6,7 +6,7 @@
 
 **A virtual desktop environment that replaces your browser's new tab page.**
 
-Manifest V3 · zero runtime dependencies · offline-first · works in Chrome, Edge, Brave, Vivaldi, Opera and Helium
+Manifest V3 · zero runtime dependencies · offline-first · works in Chrome, Edge, Brave, Vivaldi, Opera. Tested on Helium
 
 </div>
 
