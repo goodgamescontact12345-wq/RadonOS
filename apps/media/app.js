@@ -375,10 +375,24 @@ $('#shuffle').addEventListener('click', (event) => {
   event.currentTarget.classList.toggle('on', state.shuffle);
 });
 
+/**
+ * Off → the whole playlist → this song. The button carries its own glyph per
+ * mode, so "loop this song" is visible rather than a tooltip away.
+ */
+function paintRepeat(button) {
+  const single = state.repeat === 'one';
+  button.classList.toggle('on', state.repeat !== 'off');
+  button.classList.toggle('single', single);
+  button.innerHTML = icon(single ? 'repeat-one' : 'repeat', { size: 17 });
+  button.title = state.repeat === 'off'
+    ? 'Repeat off'
+    : single ? 'Loop this song' : 'Loop the playlist';
+  button.setAttribute('aria-label', button.title);
+}
+
 $('#repeat').addEventListener('click', (event) => {
   state.repeat = state.repeat === 'off' ? 'all' : state.repeat === 'all' ? 'one' : 'off';
-  event.currentTarget.classList.toggle('on', state.repeat !== 'off');
-  event.currentTarget.title = `Repeat: ${state.repeat}`;
+  paintRepeat(event.currentTarget);
 });
 
 $('#filter').addEventListener('click', (event) => {

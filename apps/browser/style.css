@@ -1,3 +1,66 @@
+/* ------------------------------------------------------------- tab strip */
+.tab-strip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-strip::-webkit-scrollbar { display: none; }
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 92px;
+  max-width: 188px;
+  padding: 6px 7px 6px 11px;
+  border-radius: 11px 11px 0 0;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  color: var(--text-faint);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background .14s, color .14s, border-color .14s;
+}
+.tab:hover { background: rgba(255, 255, 255, .05); color: var(--text); }
+.tab.active { background: rgba(255, 255, 255, .085); border-color: var(--border); color: var(--text); }
+[data-theme="light"] .tab:hover { background: rgba(13, 30, 45, .05); }
+[data-theme="light"] .tab.active { background: var(--surface); }
+.tab-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-close {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0;
+  transition: opacity .12s, background .12s;
+}
+.tab:hover .tab-close,
+.tab.active .tab-close { opacity: .65; }
+.tab-close:hover { opacity: 1; background: rgba(255, 255, 255, .12); }
+.tab-new {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-faint);
+  transition: background .12s, color .12s;
+}
+.tab-new:hover { background: rgba(255, 255, 255, .08); color: var(--text); }
+
 .address-shell {
   display: flex;
   align-items: center;
@@ -44,6 +107,7 @@
   flex: none;
 }
 
+.frame-layer { flex: 1; min-height: 0; display: flex; }
 .browser-frame { flex: 1; width: 100%; border: 0; background: #fff; }
 [data-theme="dark"] .browser-frame { background: #0a1420; }
 

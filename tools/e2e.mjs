@@ -636,8 +636,8 @@ const SCENARIOS = [
       address.dispatchEvent(new d.defaultView.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await new Promise((r) => setTimeout(r, 1600));
       const loaded = {
-        frameVisible: !d.querySelector('#frame').hidden,
-        url: d.querySelector('#frame').src,
+        frameVisible: !!d.querySelector('#frame-layer iframe:not([hidden])'),
+        url: d.querySelector('#frame-layer iframe:not([hidden])')?.src || '',
         status: d.querySelector('#status-text')?.textContent,
         panelHidden: d.querySelector('#blocked').hidden,
       };

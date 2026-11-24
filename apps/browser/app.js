@@ -2,32 +2,34 @@ import { icon } from '../../shared/icons.js';
 import { QUICK_LINKS } from '../../shared/registry.js';
 import { loadSettings, getSettings, updateSettings } from '../../shared/settings.js';
 import { initTheme } from '../../shared/theme.js';
-import { paintIcons, toast, escapeHtml, openApp } from '../../shared/ui.js';
-import { isExtension, runtime, tabs } from '../../shared/platform.js';
+import { paintIcons, toast, escapeHtml } from '../../shared/ui.js';
+import { isExtension, runtime, tabs as browserTabs } from '../../shared/platform.js';
 import { LinkedWindow } from '../../shared/embedWindow.js';
 import { EMBED_BLOCKED } from '../../shared/framePolicy.js';
 
 const $ = (selector) => document.querySelector(selector);
 
-const state = {
-  history: [],
-  index: -1,
-  current: null,
-  loading: false,
-  timeout: null,
-};
-
-const frame = $('#frame');
 const home = $('#home');
 const blocked = $('#blocked');
 const address = $('#address');
+const strip = $('#tab-strip');
+const frameLayer = $('#frame-layer');
 const linked = new LinkedWindow();
 
 /**
+ * Tabs own their own frame and history, so switching does not reload the page
+ * and every tab keeps its own back/forward stack. One RadonOS window has one
+ * linked external window, so a frame-blocked page in any tab drives that.
+ */
+const tabList = [];
+let activeId = null;
+let seq = 0;
+
+/**
  * Whether this build can drop frame-blocking headers, which is what lets the
- * list below load in this window instead of a separate one. The extension asks
- * its service worker, which installs the declarativeNetRequest rule; the hosted
- * build has no server to rewrite responses and answers false.
+ * known-blocked hosts load in this window instead of a separate one. The
+ * extension asks its service worker, which installs the declarativeNetRequest
+ * rule; the hosted build has no server to rewrite responses and answers false.
  */
 const frameUnlockReady = (async () => {
   if (!isExtension) return false;
@@ -60,13 +62,19 @@ function isBlocked(url) {
   return [...EMBED_BLOCKED].some((domain) => host.endsWith(`.${domain}`));
 }
 
+const activeTab = () => tabList.find((tab) => tab.id === activeId) || null;
+
+function tabTitle(tab) {
+  const host = hostOf(tab.blockedUrl || tab.url).replace(/^www\./, '');
+  return host || 'New tab';
+}
+
 function setStatus(text, { url = '' } = {}) {
   $('#status-text').textContent = text;
   $('#status-url').textContent = url;
 }
 
 function setLoading(loading) {
-  state.loading = loading;
   $('#address-loading').hidden = !loading;
   $('#nav-reload').classList.toggle('spinning', loading);
 }
@@ -104,113 +112,252 @@ function openLinkedWindow(url) {
 function focusLinkedWindow() {
   if (linked.focus()) return;
   // Closed by the user (or never created): bring it back at the current size.
-  if (state.current) openLinkedWindow(state.current);
+  const tab = activeTab();
+  if (tab?.url) openLinkedWindow(tab.url);
+}
+
+/* ------------------------------------------------------------------ tabs */
+function createTab() {
+  const frame = document.createElement('iframe');
+  frame.className = 'browser-frame';
+  frame.hidden = true;
+  frame.referrerPolicy = 'no-referrer';
+  frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups allow-downloads allow-same-origin allow-popups-to-escape-sandbox');
+  frameLayer.append(frame);
+
+  const tab = {
+    id: `tab-${++seq}`,
+    url: null,
+    blockedUrl: null,
+    blockedOpened: false,
+    history: [],
+    index: -1,
+    loading: false,
+    slow: false,
+    timeout: null,
+    frame,
+  };
+  frame.addEventListener('load', () => onFrameLoad(tab));
+  tabList.push(tab);
+  return tab;
+}
+
+function newTab(url = '') {
+  const tab = createTab();
+  activateTab(tab.id);
+  if (url) void navigate(url, { tab });
+  else showHome(tab);
+  return tab;
+}
+
+function closeTab(id) {
+  const index = tabList.findIndex((tab) => tab.id === id);
+  if (index < 0) return;
+  const [tab] = tabList.splice(index, 1);
+  clearTimeout(tab.timeout);
+  tab.frame.remove();
+  // The popup belongs to the window, not the tab: close it once nothing wants it.
+  if (linked.isOpen && !tabList.some((entry) => entry.blockedUrl)) linked.close();
+
+  if (activeId !== id) {
+    drawTabs();
+    return;
+  }
+  const next = tabList[index] || tabList[index - 1];
+  if (next) activateTab(next.id);
+  else newTab();
+}
+
+function drawTabs() {
+  strip.innerHTML = tabList.map((tab) => `
+    <div class="tab${tab.id === activeId ? ' active' : ''}" data-tab="${tab.id}" role="tab"
+         aria-selected="${tab.id === activeId}" title="${escapeHtml(tab.url || tab.blockedUrl || 'New tab')}">
+      <span class="tab-title">${escapeHtml(tabTitle(tab))}</span>
+      <button class="tab-close" data-close="${tab.id}" title="Close tab" aria-label="Close tab">${icon('close', { size: 12 })}</button>
+    </div>`).join('')
+    + `<button class="tab-new" id="tab-new" title="New tab (Ctrl+T)" aria-label="New tab">${icon('plus', { size: 14 })}</button>`;
+}
+
+function renderView(tab) {
+  const framed = !!tab.url && !tab.blockedUrl;
+  home.hidden = !!tab.url || !!tab.blockedUrl;
+  blocked.hidden = !tab.blockedUrl;
+  tab.frame.hidden = !framed;
+  $('#embed-warning').hidden = !tab.slow;
+  if (tab.blockedUrl) renderBlocked(tab);
+  if (!tab.url && !tab.blockedUrl) renderQuickLinks();
+}
+
+function activateTab(id) {
+  const tab = tabList.find((entry) => entry.id === id);
+  if (!tab) return;
+  activeId = id;
+  for (const other of tabList) other.frame.hidden = true;
+
+  address.value = tab.url || tab.blockedUrl || '';
+  $('#address-shell').classList.toggle('secure', (tab.url || '').startsWith('https://'));
+  renderView(tab);
+  drawTabs();
+  updateNavButtons();
+  setLoading(tab.loading);
+  if (tab.blockedUrl) {
+    setStatus(tab.blockedOpened ? 'Opened in a linked window' : 'Blocked from embedding', { url: tab.blockedUrl });
+  } else if (tab.url) {
+    setStatus(tab.loading ? 'Loading…' : 'Loaded', { url: tab.url });
+  } else {
+    setStatus('Home');
+  }
 }
 
 /* ------------------------------------------------------------ navigation */
-function showHome() {
-  state.current = null;
-  address.value = '';
+function showHome(tab = activeTab()) {
+  if (!tab) return;
+  clearTimeout(tab.timeout);
+  tab.url = null;
+  tab.blockedUrl = null;
+  tab.blockedOpened = false;
+  tab.loading = false;
+  tab.slow = false;
+  tab.frame.hidden = true;
+  tab.frame.src = 'about:blank';
   linked.close(); // leaving the page closes the window that was showing it
-  frame.hidden = true;
-  frame.src = 'about:blank';
-  blocked.hidden = true;
-  $('#embed-warning').hidden = true;
-  home.hidden = false;
-  renderQuickLinks();
+
+  if (tab.id !== activeId) return;
+  address.value = '';
+  $('#address-shell').classList.remove('secure');
+  renderView(tab);
+  drawTabs();
+  setLoading(false);
   setStatus('Home');
   updateNavButtons();
 }
 
-function showBlocked(url, { opened = false } = {}) {
-  home.hidden = true;
-  frame.hidden = true;
-  frame.src = 'about:blank';
-  blocked.hidden = false;
-  $('#embed-warning').hidden = true;
-  $('#blocked-title').textContent = opened
+function renderBlocked(tab) {
+  const url = tab.blockedUrl;
+  $('#blocked-title').textContent = tab.blockedOpened
     ? 'Opened in a linked window'
     : 'This site needs its own window';
   $('#blocked-text').innerHTML = `
     <code>${escapeHtml(hostOf(url))}</code> sends headers that forbid being displayed inside
-    a frame, so RadonOS cannot draw it in this window. ${opened
+    a frame, so RadonOS cannot draw it in this window. ${tab.blockedOpened
       ? 'It is open in a browser window linked to this one: that window keeps this window’s size as you resize or move it, and closes with it.'
       : 'Open it in a linked window and it will keep this window’s size as you resize or move it.'}`;
   renderLinkedWindow(linked.state);
+}
+
+function showBlocked(tab, url, { opened = false } = {}) {
+  tab.blockedUrl = url;
+  tab.blockedOpened = opened;
+  tab.loading = false;
+  tab.slow = false;
+  tab.frame.hidden = true;
+  tab.frame.src = 'about:blank';
+  clearTimeout(tab.timeout);
+
+  if (tab.id !== activeId) return;
+  renderView(tab);
+  drawTabs();
+  setLoading(false);
   setStatus(opened ? 'Opened in a linked window' : 'Blocked from embedding', { url });
   updateNavButtons();
 }
 
-async function navigate(rawUrl, { push = true, force = false } = {}) {
+async function navigate(rawUrl, { push = true, force = false, tab = activeTab() } = {}) {
   const url = normalize(rawUrl);
-  if (!url) return;
-  clearTimeout(state.timeout);
+  if (!url || !tab) return;
+  clearTimeout(tab.timeout);
+  tab.slow = false;
 
   if (push) {
-    state.history = state.history.slice(0, state.index + 1);
-    state.history.push(url);
-    state.index = state.history.length - 1;
+    tab.history = tab.history.slice(0, tab.index + 1);
+    tab.history.push(url);
+    tab.index = tab.history.length - 1;
   }
-  state.current = url;
-  address.value = url;
-  blocked.hidden = true;
-  home.hidden = true;
+  tab.url = url;
+  tab.blockedUrl = null;
+  tab.blockedOpened = false;
 
-  const shell = $('#address-shell');
-  shell.classList.toggle('secure', url.startsWith('https://'));
+  const visible = tab.id === activeId;
+  if (visible) {
+    address.value = url;
+    $('#address-shell').classList.toggle('secure', url.startsWith('https://'));
+    blocked.hidden = true;
+    home.hidden = true;
+    $('#embed-warning').hidden = true;
+  }
 
   // A site known to block framing still loads here whenever this build can
   // strip those headers; only a build that cannot needs the external window.
   if (!force && isBlocked(url) && !(await frameUnlockReady)) {
-    if (state.current !== url) return;
+    if (tab.url !== url) return;
     const opened = openLinkedWindow(url);
-    showBlocked(url, { opened });
+    showBlocked(tab, url, { opened });
     return;
   }
-  // The desktop moved on while the capability was being checked.
-  if (state.current !== url) return;
+  // The tab moved on while the capability was being checked.
+  if (tab.url !== url) return;
 
   // RadonOS can frame this page again, so the external window is not needed.
-  if (linked.isOpen) linked.close();
+  if (linked.isOpen && !tab.blockedUrl) linked.close();
 
-  frame.hidden = false;
-  frame.src = url;
-  $('#embed-warning').hidden = true;
-  setLoading(true);
-  setStatus('Loading…', { url });
+  tab.frame.hidden = false;
+  tab.frame.src = url;
+  tab.loading = true;
+  if (visible) {
+    setLoading(true);
+    drawTabs();
+    setStatus('Loading…', { url });
+  }
 
-  state.timeout = setTimeout(() => {
-    if (!state.loading) return;
+  tab.timeout = setTimeout(() => {
+    if (!tab.loading) return;
+    tab.loading = false;
+    tab.slow = true;
+    if (tab.id !== activeId) return;
     setLoading(false);
     $('#embed-warning').hidden = false;
     setStatus('Taking longer than expected', { url });
   }, 8000);
 
-  updateNavButtons();
+  if (visible) updateNavButtons();
+}
+
+function onFrameLoad(tab) {
+  clearTimeout(tab.timeout);
+  tab.loading = false;
+  tab.slow = false;
+  if (tab.id !== activeId) return;
+  setLoading(false);
+  $('#embed-warning').hidden = true;
+  if (!tab.frame.hidden) setStatus('Loaded', { url: tab.url || '' });
 }
 
 function goBack() {
-  if (state.index <= 0) return;
-  state.index -= 1;
-  navigate(state.history[state.index], { push: false, force: true });
+  const tab = activeTab();
+  if (!tab || tab.index <= 0) return;
+  tab.index -= 1;
+  void navigate(tab.history[tab.index], { push: false, force: true, tab });
 }
 
 function goForward() {
-  if (state.index >= state.history.length - 1) return;
-  state.index += 1;
-  navigate(state.history[state.index], { push: false, force: true });
+  const tab = activeTab();
+  if (!tab || tab.index >= tab.history.length - 1) return;
+  tab.index += 1;
+  void navigate(tab.history[tab.index], { push: false, force: true, tab });
 }
 
 function reload() {
-  if (!state.current) return;
-  const url = state.current;
-  frame.src = 'about:blank';
-  setTimeout(() => navigate(url, { push: false, force: true }), 60);
+  const tab = activeTab();
+  if (!tab || !tab.url) return;
+  const url = tab.url;
+  tab.frame.src = 'about:blank';
+  setTimeout(() => navigate(url, { push: false, force: true, tab }), 60);
 }
 
 function updateNavButtons() {
-  $('#nav-back').disabled = state.index <= 0;
-  $('#nav-forward').disabled = state.index >= state.history.length - 1;
+  const tab = activeTab();
+  $('#nav-back').disabled = !tab || tab.index <= 0;
+  $('#nav-forward').disabled = !tab || tab.index >= tab.history.length - 1;
 }
 
 /* ------------------------------------------------------------------ home */
@@ -234,17 +381,18 @@ function renderQuickLinks() {
     </button>`).join('');
 
   $('#quick-grid').querySelectorAll('[data-url]').forEach((button) => {
-    button.addEventListener('click', () => navigate(button.dataset.url));
+    button.addEventListener('click', () => void navigate(button.dataset.url));
   });
 }
 
 /* -------------------------------------------------------------- bookmark */
 async function saveBookmark() {
-  if (!state.current) {
+  const tab = activeTab();
+  if (!tab?.url) {
     toast('Open a page first', { type: 'info' });
     return;
   }
-  const url = state.current;
+  const url = tab.url;
   const bookmarks = getSettings().bookmarks || [];
   if (bookmarks.some((bookmark) => bookmark.url === url)) {
     toast('Already bookmarked', { type: 'info', iconName: 'star' });
@@ -262,60 +410,72 @@ async function saveBookmark() {
 }
 
 /* --------------------------------------------------------------- wiring */
+strip.addEventListener('click', (event) => {
+  const close = event.target.closest('[data-close]');
+  if (close) {
+    closeTab(close.dataset.close);
+    return;
+  }
+  if (event.target.closest('#tab-new')) {
+    newTab();
+    return;
+  }
+  const tab = event.target.closest('[data-tab]');
+  if (tab) activateTab(tab.dataset.tab);
+});
+
 $('#nav-back').addEventListener('click', goBack);
 $('#nav-forward').addEventListener('click', goForward);
 $('#nav-reload').addEventListener('click', reload);
-$('#nav-home').addEventListener('click', showHome);
+$('#nav-home').addEventListener('click', () => showHome());
 $('#bookmark').addEventListener('click', saveBookmark);
-$('#go').addEventListener('click', () => navigate(address.value));
+$('#go').addEventListener('click', () => void navigate(address.value));
 
 $('#external').addEventListener('click', async () => {
-  if (!state.current) {
+  const tab = activeTab();
+  if (!tab?.url) {
     toast('Nothing to open yet', { type: 'info' });
     return;
   }
-  await tabs.open(state.current);
+  await browserTabs.open(tab.url);
   toast('Opened in a real browser tab', { type: 'info', iconName: 'external' });
 });
 
 $('#warning-external').addEventListener('click', () => {
-  if (state.current) openLinkedWindow(state.current);
+  const tab = activeTab();
+  if (tab?.url) openLinkedWindow(tab.url);
 });
 
 $('#blocked-focus').addEventListener('click', focusLinkedWindow);
 $('#blocked-tab').addEventListener('click', () => {
-  if (state.current) void tabs.open(state.current);
+  const tab = activeTab();
+  if (tab?.blockedUrl) void browserTabs.open(tab.blockedUrl);
 });
 $('#blocked-copy').addEventListener('click', async () => {
-  if (!state.current) return;
+  const url = activeTab()?.blockedUrl;
+  if (!url) return;
   try {
-    await navigator.clipboard.writeText(state.current);
+    await navigator.clipboard.writeText(url);
     toast('URL copied', { type: 'success', iconName: 'copy' });
   } catch {
-    toast(state.current, { title: 'URL', iconName: 'link' });
+    toast(url, { title: 'URL', iconName: 'link' });
   }
 });
 $('#blocked-try').addEventListener('click', () => {
-  const url = state.current;
-  if (url) navigate(url, { push: false, force: true });
+  const tab = activeTab();
+  if (tab?.blockedUrl) void navigate(tab.blockedUrl, { push: false, force: true, tab });
 });
 
 address.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
     event.preventDefault();
-    navigate(address.value);
+    void navigate(address.value);
   }
   if (event.key === 'Escape') {
-    address.value = state.current || '';
+    const tab = activeTab();
+    address.value = tab?.url || tab?.blockedUrl || '';
     address.blur();
   }
-});
-
-frame.addEventListener('load', () => {
-  clearTimeout(state.timeout);
-  setLoading(false);
-  if (frame.hidden) return;
-  setStatus('Loaded', { url: state.current || '' });
 });
 
 window.addEventListener('online', () => setStatus('Back online'));
@@ -332,22 +492,32 @@ document.addEventListener('keydown', (event) => {
   await loadSettings();
   await initTheme();
   paintIcons();
-  showHome();
 
   const target = new URLSearchParams(location.search).get('url');
-  if (target) navigate(target, { push: true });
+  if (target) {
+    const tab = createTab();
+    activateTab(tab.id);
+    void navigate(target, { tab });
+  } else {
+    newTab();
+  }
 
   document.addEventListener('keydown', (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'l') {
+    const key = event.key.toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && key === 'l') {
       event.preventDefault();
       address.focus();
       address.select();
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
+    } else if ((event.ctrlKey || event.metaKey) && key === 'd') {
       event.preventDefault();
       void saveBookmark();
-    } else if (event.ctrlKey && event.key.toLowerCase() === 't') {
+    } else if ((event.ctrlKey || event.metaKey) && key === 't') {
       event.preventDefault();
-      openApp('browser');
+      newTab();
+    } else if ((event.ctrlKey || event.metaKey) && key === 'w') {
+      event.preventDefault();
+      if (activeId) closeTab(activeId);
     }
   });
 })();
+

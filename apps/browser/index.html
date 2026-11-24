@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="app">
+  <div class="tab-strip" id="tab-strip" role="tablist" aria-label="Tabs"></div>
+
   <div class="app-toolbar">
     <button class="ros-btn icon ghost" id="nav-back" data-icon="chevron-left" data-size="17" title="Back"></button>
     <button class="ros-btn icon ghost" id="nav-forward" data-icon="chevron-right" data-size="17" title="Forward"></button>
@@ -51,9 +53,8 @@
         </div>
       </div>
 
-      <iframe id="frame" class="browser-frame" hidden
-        referrerpolicy="no-referrer"
-        sandbox="allow-scripts allow-forms allow-popups allow-downloads allow-same-origin allow-popups-to-escape-sandbox"></iframe>
+      <!-- One frame per tab, so switching tabs never reloads a page -->
+      <div class="frame-layer" id="frame-layer"></div>
 
       <div class="blocked-panel" id="blocked" hidden>
         <div class="blocked-card">
