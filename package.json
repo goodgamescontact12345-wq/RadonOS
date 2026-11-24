@@ -17,7 +17,8 @@
     "e2e:headed": "node tools/e2e.mjs --headed",
     "site:build": "node tools/build-site.mjs",
     "site:dev": "node tools/build-site.mjs --base /RadonOS && node tools/serve.mjs --root site/dist --pages --base /RadonOS --port 8787",
-    "site:test": "node tools/site-test.mjs"
+    "site:test": "node tools/site-test.mjs",
+    "ext:build": "node tools/build-extension.mjs"
   },
   "engines": {
     "node": ">=20"

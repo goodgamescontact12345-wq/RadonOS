@@ -71,6 +71,10 @@ attribute that flips the floating taskbar, window layer, start menu and popovers
 5. Optional: click the toolbar icon (the atom) to open the desktop in a new tab; right-click a link on any
    page to **Open link in RadonOS** or **Save link to RadonOS bookmarks**.
 
+To carry the extension to another machine, pack it first: `npm run ext:build` writes
+`dist/radonos-extension-<version>.zip` (49 files, ~180 KiB, no tooling or docs inside). Unzip it and
+load the unpacked folder with the same step 3; the same archive is what a store listing takes.
+
 **Verify it is live** (takes 30 seconds):
 
 - Paste `chrome-extension://<your-extension-id>/newtab/index.html` into the address bar — the desktop
@@ -101,6 +105,7 @@ npm run site:build   # assemble site/dist (50 files, ~500 KiB) with the origin r
 npm run site:build -- --base /RadonOS   # the project-page shape CI builds
 npm run site:dev     # build, then serve site/dist the way GitHub Pages would, on :8787
 npm run site:test    # crawl that build over HTTP (pass an origin for a deployment)
+npm run ext:build    # pack the extension as dist/radonos-extension-<version>.zip
 node tools/e2e.mjs --url=https://your-deployment/   # full UI suite against a live origin
 ```
 
@@ -240,7 +245,8 @@ radonos/
 │   └── ...
 ├── assets/logo.svg          Logomark for docs
 ├── icons/                   Generated PNG icons
-└── tools/                   Dev server, icon renderer, validators, hosted build and the four harnesses
+└── tools/                   Dev server, icon renderer, validators, hosted build, extension packager
+                             and the four harnesses
 ```
 
 ### How the pieces talk
