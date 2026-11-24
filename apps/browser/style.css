@@ -151,6 +151,28 @@
   border: 1px dashed rgba(255, 255, 255, .1);
 }
 
+/* Browser shortcuts, on the chords browsers do not keep for themselves. */
+.home-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.home-keys span { display: inline-flex; align-items: center; gap: 3px; }
+.home-keys kbd {
+  font-family: inherit;
+  font-size: 10px;
+  min-width: 17px;
+  text-align: center;
+  padding: 2px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  background: rgba(255, 255, 255, .05);
+  color: var(--text-dim);
+}
+[data-theme="light"] .home-keys kbd { background: rgba(13, 30, 45, .05); }
+
 .blocked-panel { flex: 1; display: grid; place-items: center; padding: 30px; }
 .blocked-card {
   width: min(520px, 100%);

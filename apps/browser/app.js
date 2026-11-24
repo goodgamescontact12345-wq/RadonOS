@@ -175,7 +175,7 @@ function drawTabs() {
       <span class="tab-title">${escapeHtml(tabTitle(tab))}</span>
       <button class="tab-close" data-close="${tab.id}" title="Close tab" aria-label="Close tab">${icon('close', { size: 12 })}</button>
     </div>`).join('')
-    + `<button class="tab-new" id="tab-new" title="New tab (Ctrl+T)" aria-label="New tab">${icon('plus', { size: 14 })}</button>`;
+    + `<button class="tab-new" id="tab-new" title="New tab (Alt+T)" aria-label="New tab">${icon('plus', { size: 14 })}</button>`;
 }
 
 function renderView(tab) {
@@ -481,11 +481,47 @@ address.addEventListener('keydown', (event) => {
 window.addEventListener('online', () => setStatus('Back online'));
 window.addEventListener('offline', () => setStatus('Offline — RadonOS apps still work'));
 
-document.addEventListener('keydown', (event) => {
-  if (event.altKey && event.code === 'ArrowLeft') goBack();
-  if (event.altKey && event.code === 'ArrowRight') goForward();
+/* ------------------------------------------------------------- shortcuts */
+/**
+ * Chrome, Edge and Firefox keep `Ctrl`+`W` / `Ctrl`+`T` / `Ctrl`+`Tab` /
+ * `Alt`+`←` for themselves — a page never receives them, so no handler here
+ * can take them back. Every action therefore also lives on an `Alt` chord,
+ * which those browsers do deliver, and the `Ctrl` spellings stay for hosts
+ * that pass them through (Electron, some PWA shells, the dev harness).
+ */
+function onShortcut(event) {
+  const key = event.key.toLowerCase();
+  const ctrl = event.ctrlKey || event.metaKey;
+
+  if (event.altKey && !ctrl && !event.shiftKey) {
+    if (key === 't') { event.preventDefault(); newTab(); return; }
+    if (key === 'w') { event.preventDefault(); if (activeId) closeTab(activeId); return; }
+    if (key === 'r') { event.preventDefault(); reload(); return; }
+    if (key === 'a') { event.preventDefault(); address.focus(); address.select(); return; }
+    if (/^[1-9]$/.test(key)) {
+      event.preventDefault();
+      const tab = Number(key) === 9 ? tabList.at(-1) : tabList[Number(key) - 1];
+      if (tab) activateTab(tab.id);
+      return;
+    }
+  }
+
+  if (ctrl && event.altKey) {
+    if (event.key === 'ArrowLeft') { event.preventDefault(); goBack(); return; }
+    if (event.key === 'ArrowRight') { event.preventDefault(); goForward(); return; }
+  }
+
+  if (ctrl && !event.altKey) {
+    if (key === 'l') { event.preventDefault(); address.focus(); address.select(); return; }
+    if (key === 'd') { event.preventDefault(); void saveBookmark(); return; }
+    if (key === 't') { event.preventDefault(); newTab(); return; }
+    if (key === 'w') { event.preventDefault(); if (activeId) closeTab(activeId); return; }
+  }
+
   if (event.key === 'F5') reload();
-});
+}
+
+document.addEventListener('keydown', onShortcut);
 
 /* ------------------------------------------------------------------ boot */
 (async () => {
@@ -501,23 +537,5 @@ document.addEventListener('keydown', (event) => {
   } else {
     newTab();
   }
-
-  document.addEventListener('keydown', (event) => {
-    const key = event.key.toLowerCase();
-    if ((event.ctrlKey || event.metaKey) && key === 'l') {
-      event.preventDefault();
-      address.focus();
-      address.select();
-    } else if ((event.ctrlKey || event.metaKey) && key === 'd') {
-      event.preventDefault();
-      void saveBookmark();
-    } else if ((event.ctrlKey || event.metaKey) && key === 't') {
-      event.preventDefault();
-      newTab();
-    } else if ((event.ctrlKey || event.metaKey) && key === 'w') {
-      event.preventDefault();
-      if (activeId) closeTab(activeId);
-    }
-  });
 })();
 

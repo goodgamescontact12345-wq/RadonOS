@@ -212,12 +212,35 @@ export class WindowManager extends EventTarget {
     this.showLoading(win);
     win.iframe.src = this.buildSrc(app, win.args, id);
     win.iframe.addEventListener('load', () => this.hideLoading(win), { once: false });
+    win.iframe.addEventListener('load', () => this.bindIframeKeys(win), { once: false });
 
     this.focus(id);
     if (!options.minimized) playOpen();
     this.persist();
     this.emit();
     return win;
+  }
+
+  /**
+   * Key events inside an app iframe never reach this document, so the desktop's
+   * Alt shortcuts are wired onto the app's own document as well. An app that
+   * already acted on a chord calls `preventDefault`, and the shell leaves that
+   * chord alone — which is how the browser's Alt+W stays "close tab" there
+   * while every other window still uses it to close the window.
+   */
+  bindIframeKeys(win) {
+    try {
+      const doc = win.iframe.contentWindow?.document;
+      // A reload gives a fresh document with no listeners; the old one is gone.
+      if (!doc || doc === win.keysDoc) return;
+      win.keysDoc = doc;
+      doc.addEventListener('keydown', (event) => {
+        if (event.defaultPrevented) return;
+        this.onKey(event);
+      });
+    } catch {
+      /* cross-origin frame (a page inside an app): nothing to bind */
+    }
   }
 
   showLoading(win) {
@@ -726,7 +749,9 @@ export class WindowManager extends EventTarget {
     } else if (event.code === 'KeyM' && active) {
       event.preventDefault();
       this.minimize(active);
-    } else if (event.code === 'Tab' && this.windows.size) {
+    } else if ((event.code === 'Tab' || event.code === 'Backquote') && this.windows.size) {
+      // Alt+Tab belongs to Windows and macOS, so Alt+` is the one that reaches
+      // the page; both cycle, whichever the system lets through.
       event.preventDefault();
       this.cycle();
     }

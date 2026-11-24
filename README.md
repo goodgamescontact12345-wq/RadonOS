@@ -354,7 +354,7 @@ check those.
 | `Alt` + `Space` | Open the start menu / search |
 | `Alt` + `W` | Close the focused window |
 | `Alt` + `M` | Minimise the focused window |
-| `Alt` + `Tab` | Cycle open windows |
+| `Alt` + `Tab` / `Alt` + `` ` `` | Cycle open windows (`Alt`+`Tab` belongs to Windows and macOS, so `Alt`+`` ` `` is the one that always arrives) |
 | `Alt` + `Shift` + `←` / `→` | Tile the focused window to the left / right half |
 | `Alt` + `Shift` + `1`–`4` | Tile to a quadrant (top-left → bottom-right) |
 | `Alt` + `Shift` + `5` | Centre the focused window |
@@ -364,10 +364,16 @@ check those.
 | Drag to screen edge | Snap left/right, drag to top to maximise |
 | `Ctrl` + `S` / `Ctrl` + `O` / `Ctrl` + `N` | Notepad save / open / new |
 | `Ctrl` + `L` / `Ctrl` + `C` | Terminal clear / cancel line |
-| `Ctrl` + `L` / `Ctrl` + `D` / `Ctrl` + `T` / `Ctrl` + `W` | Browser address / bookmark / new tab / close tab |
+| `Alt` + `T` / `Alt` + `W` / `Alt` + `1`–`9` | Browser: new tab / close tab / switch tab |
+| `Alt` + `A` / `Alt` + `R` / `Ctrl` + `Alt` + `←` / `→` | Browser: address bar / reload / back / forward |
+| `Ctrl` + `L` / `Ctrl` + `D` / `Ctrl` + `T` / `Ctrl` + `W` | Browser: the same actions for hosts that do deliver these chords (Electron, some PWA shells, the dev harness) |
 | `Tab` | Terminal path + command completion |
 | `Delete` | Move the selected Files items to trash |
 | `Alt` + `Shift` + `R` | Open RadonOS (extension command) |
+
+Shell shortcuts keep working while an app window has focus: each window's app document is wired to the
+same handler, and an app that acts on a chord itself (the browser's `Alt`+`W` closes a tab) marks the
+event as used so the desktop leaves it alone.
 
 ## Limitations and roadmap
 
@@ -387,6 +393,12 @@ check those.
   `chrome.windows` and can resize it at any point; the hosted/dev build uses `window.open`, which the
   browser only lets the page resize while the popup is still same-origin (after that it re-opens the
   named window at the new size).
+- Shortcuts the browser keeps for itself — `Ctrl`+`W`, `Ctrl`+`T`, `Ctrl`+`Tab`, `Ctrl`+`L`,
+  `Alt`+`←`, `F5` — are handled before a page (or an extension) ever sees them, so RadonOS cannot
+  intercept or suppress them: pressing `Ctrl`+`W` in the desktop closes the RadonOS tab itself, and
+  session restore is what brings the session back. The browser app therefore mirrors every action on
+  an `Alt` chord that browsers do deliver, and `Alt`+`` ` `` exists for window cycling besides the
+  system-owned `Alt`+`Tab`.
 - The virtual file system is per browser profile and is not synced anywhere. Export/import in
   Settings → Storage covers settings, folders and text files (binaries stay local).
 - `performance.memory` is Chromium-only (and may report coarse values); the widgets degrade gracefully.
