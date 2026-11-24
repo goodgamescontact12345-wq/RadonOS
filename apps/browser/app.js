@@ -4,6 +4,7 @@ import { loadSettings, getSettings, updateSettings } from '../../shared/settings
 import { initTheme } from '../../shared/theme.js';
 import { paintIcons, toast, escapeHtml, openApp } from '../../shared/ui.js';
 import { tabs } from '../../shared/platform.js';
+import { LinkedWindow } from '../../shared/embedWindow.js';
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -29,6 +30,7 @@ const frame = $('#frame');
 const home = $('#home');
 const blocked = $('#blocked');
 const address = $('#address');
+const linked = new LinkedWindow();
 
 /* ------------------------------------------------------------- utilities */
 function normalize(input) {
@@ -66,10 +68,47 @@ function setLoading(loading) {
   $('#nav-reload').classList.toggle('spinning', loading);
 }
 
+/* ------------------------------------------------------ linked page window */
+function renderLinkedWindow(state) {
+  const size = $('#linked-size');
+  if (!size || !state.bounds) return;
+  blocked.dataset.linkedWidth = String(state.bounds.width);
+  blocked.dataset.linkedHeight = String(state.bounds.height);
+  size.textContent = state.open
+    ? `Linked window · ${state.bounds.width} × ${state.bounds.height}`
+    : 'Linked window closed';
+  size.classList.toggle('closed', !state.open);
+  $('#linked-action').textContent = state.open ? 'Focus linked window' : 'Open linked window';
+}
+
+linked.addEventListener('change', (event) => renderLinkedWindow(event.detail));
+
+/** Hand the page to a browser window that mirrors this RadonOS window. */
+function openLinkedWindow(url) {
+  if (!url) return false;
+  const opened = linked.open(url);
+  renderLinkedWindow(linked.state);
+  if (!opened) {
+    toast('The browser blocked the linked window — allow pop-ups for RadonOS', {
+      type: 'error',
+      iconName: 'alert',
+      timeout: 5200,
+    });
+  }
+  return opened;
+}
+
+function focusLinkedWindow() {
+  if (linked.focus()) return;
+  // Closed by the user (or never created): bring it back at the current size.
+  if (state.current) openLinkedWindow(state.current);
+}
+
 /* ------------------------------------------------------------ navigation */
 function showHome() {
   state.current = null;
   address.value = '';
+  linked.close(); // leaving the page closes the window that was showing it
   frame.hidden = true;
   frame.src = 'about:blank';
   blocked.hidden = true;
@@ -80,16 +119,22 @@ function showHome() {
   updateNavButtons();
 }
 
-function showBlocked(url) {
+function showBlocked(url, { opened = false } = {}) {
   home.hidden = true;
   frame.hidden = true;
   frame.src = 'about:blank';
   blocked.hidden = false;
   $('#embed-warning').hidden = true;
+  $('#blocked-title').textContent = opened
+    ? 'Opened in a linked window'
+    : 'This site needs its own window';
   $('#blocked-text').innerHTML = `
     <code>${escapeHtml(hostOf(url))}</code> sends headers that forbid being displayed inside
-    a frame, which is why browsers cannot embed it in a RadonOS window.`;
-  setStatus('Blocked from embedding', { url });
+    a frame, so RadonOS cannot draw it in this window. ${opened
+      ? 'It is open in a browser window linked to this one: that window keeps this window’s size as you resize or move it, and closes with it.'
+      : 'Open it in a linked window and it will keep this window’s size as you resize or move it.'}`;
+  renderLinkedWindow(linked.state);
+  setStatus(opened ? 'Opened in a linked window' : 'Blocked from embedding', { url });
   updateNavButtons();
 }
 
@@ -112,9 +157,13 @@ function navigate(rawUrl, { push = true, force = false } = {}) {
   shell.classList.toggle('secure', url.startsWith('https://'));
 
   if (!force && isBlocked(url)) {
-    showBlocked(url);
+    const opened = openLinkedWindow(url);
+    showBlocked(url, { opened });
     return;
   }
+
+  // RadonOS can frame this page again, so the external window is not needed.
+  if (linked.isOpen) linked.close();
 
   frame.hidden = false;
   frame.src = url;
@@ -222,10 +271,11 @@ $('#external').addEventListener('click', async () => {
 });
 
 $('#warning-external').addEventListener('click', () => {
-  if (state.current) void tabs.open(state.current);
+  if (state.current) openLinkedWindow(state.current);
 });
 
-$('#blocked-external').addEventListener('click', () => {
+$('#blocked-focus').addEventListener('click', focusLinkedWindow);
+$('#blocked-tab').addEventListener('click', () => {
   if (state.current) void tabs.open(state.current);
 });
 $('#blocked-copy').addEventListener('click', async () => {

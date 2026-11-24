@@ -109,6 +109,14 @@ export const runtime = {
       return null;
     }
   },
+  /** Listen for messages the service worker broadcasts (extension only). */
+  onMessage(callback) {
+    if (!extension) return () => {};
+    const handler = (message) => callback(message);
+    chrome.runtime.onMessage.addListener(handler);
+    return () => chrome.runtime.onMessage.removeListener?.(handler);
+  },
+
   openApp(app, params = {}) {
     if (extension) return runtime.send({ type: 'OPEN_APP', app, params });
     const url = new URL(runtime.getURL('newtab/index.html'));

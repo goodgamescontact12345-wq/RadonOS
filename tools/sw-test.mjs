@@ -27,6 +27,9 @@ const calls = {
   alarms: [],
   menus: [],
   menusRemoved: 0,
+  windowsCreated: [],
+  windowsUpdated: [],
+  windowsRemoved: [],
 };
 
 const settle = (ms = 40) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
@@ -40,6 +43,7 @@ const listeners = {
   command: [],
   message: [],
   storageChanged: [],
+  windowRemoved: [],
 };
 
 const area = {
@@ -88,7 +92,23 @@ globalThis.chrome = {
     },
     update: () => Promise.resolve({}),
   },
-  windows: { update: () => Promise.resolve({}) },
+  windows: {
+    update: (id, info) => {
+      calls.windowsUpdated.push({ id, ...info });
+      return Promise.resolve({ id, ...info });
+    },
+    create: (options) => {
+      calls.windowsCreated.push(options);
+      return Promise.resolve({ id: 700 + calls.windowsCreated.length, ...options });
+    },
+    get: (id) => Promise.resolve({ id, type: 'popup' }),
+    getAll: () => Promise.resolve([]),
+    remove: (id) => {
+      calls.windowsRemoved.push(id);
+      return Promise.resolve();
+    },
+    onRemoved: { addListener: (fn) => listeners.windowRemoved.push(fn) },
+  },
   alarms: {
     create: (name, options) => calls.alarms.push({ name, options }),
     onAlarm: { addListener: (fn) => listeners.alarm.push(fn) },
@@ -203,6 +223,43 @@ check('SAVE_BOOKMARK stores the entry', saveResponse?.ok === true
 
 const duplicate = await sendMessage({ type: 'SAVE_BOOKMARK', url: 'https://saved.example', title: 'dup' });
 check('SAVE_BOOKMARK is idempotent', duplicate?.duplicate === true);
+
+// --- linked page windows (frame-blocked sites)
+calls.windowsCreated.length = 0;
+const linkedOpen = await sendMessage({
+  type: 'LINKED_WINDOW_OPEN',
+  key: 'browser-1',
+  url: 'https://github.com/',
+  width: 1060,
+  height: 700,
+  left: 120,
+  top: 80,
+});
+check('LINKED_WINDOW_OPEN creates a popup at the RadonOS window bounds',
+  linkedOpen?.ok === true && calls.windowsCreated.length === 1
+  && calls.windowsCreated[0].type === 'popup'
+  && calls.windowsCreated[0].width === 1060 && calls.windowsCreated[0].height === 700
+  && calls.windowsCreated[0].left === 120 && calls.windowsCreated[0].url === 'https://github.com/',
+  JSON.stringify(calls.windowsCreated[0]));
+
+calls.windowsUpdated.length = 0;
+const linkedResize = await sendMessage({
+  type: 'LINKED_WINDOW_UPDATE',
+  key: 'browser-1',
+  url: 'https://github.com/',
+  width: 800,
+  height: 640,
+  left: 0,
+  top: 0,
+});
+check('LINKED_WINDOW_UPDATE resizes the linked popup to follow the window',
+  linkedResize?.ok === true && calls.windowsUpdated[0]?.width === 800
+  && calls.windowsUpdated[0]?.height === 640,
+  JSON.stringify(calls.windowsUpdated[0]));
+
+const linkedClose = await sendMessage({ type: 'LINKED_WINDOW_CLOSE', key: 'browser-1' });
+check('LINKED_WINDOW_CLOSE removes the linked popup',
+  linkedClose?.ok === true && calls.windowsRemoved.length === 1, String(calls.windowsRemoved[0]));
 
 const unknown = await sendMessage({ type: 'NOPE' });
 check('unknown messages are ignored', unknown === undefined);

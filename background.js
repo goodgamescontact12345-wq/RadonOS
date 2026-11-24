@@ -153,6 +153,93 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   }
 });
 
+/* ------------------------------------------------------ linked page windows */
+/**
+ * Pages RadonOS is not allowed to frame (X-Frame-Options / CSP frame-ancestors)
+ * run in a popup window that is linked to the RadonOS window they came from:
+ * the new tab page keeps it at the same size and place, and closes it with the
+ * window.
+ *
+ * `linkedWindows` maps the renderer's key (one per RadonOS window) to the chrome
+ * window id. It only lives as long as this worker; if Chrome stops the worker
+ * the next request relocates the popup by URL instead of opening a second one.
+ */
+const linkedWindows = new Map();
+
+function linkBounds(message) {
+  return {
+    width: Math.max(320, Math.round(Number(message.width) || 900)),
+    height: Math.max(240, Math.round(Number(message.height) || 640)),
+    left: Math.round(Number(message.left) || 0),
+    top: Math.round(Number(message.top) || 0),
+  };
+}
+
+async function findLinkedWindow(url) {
+  if (!chrome.windows?.getAll || !url) return null;
+  const windows = await chrome.windows.getAll({ populate: true });
+  return windows.find((win) => win.type === 'popup'
+    && (win.tabs || []).some((tab) => tab.url === url)) || null;
+}
+
+async function openLinkedWindow(message) {
+  const key = String(message.key || message.url || 'radonos');
+  const url = String(message.url || 'about:blank');
+  const bounds = linkBounds(message);
+
+  let existing = null;
+  const known = linkedWindows.get(key);
+  if (known != null && chrome.windows.get) existing = await chrome.windows.get(known).catch(() => null);
+  if (!existing) existing = await findLinkedWindow(url);
+
+  if (existing?.id != null) {
+    linkedWindows.set(key, existing.id);
+    await chrome.windows.update(existing.id, { ...bounds, focused: true });
+    const [tab] = await chrome.tabs.query({ windowId: existing.id });
+    if (tab && tab.url !== url) await chrome.tabs.update(tab.id, { url });
+    return { ok: true, windowId: existing.id, reused: true };
+  }
+
+  const created = await chrome.windows.create({ url, type: 'popup', ...bounds, focused: true });
+  linkedWindows.set(key, created.id);
+  return { ok: true, windowId: created.id, reused: false };
+}
+
+async function updateLinkedWindow(message) {
+  const key = String(message.key || message.url || 'radonos');
+  let id = linkedWindows.get(key);
+  if (id == null) {
+    const found = await findLinkedWindow(message.url);
+    if (!found) return { ok: false, missing: true };
+    id = found.id;
+    linkedWindows.set(key, id);
+  }
+  await chrome.windows.update(id, {
+    ...linkBounds(message),
+    ...(message.focused ? { focused: true } : {}),
+  });
+  return { ok: true, windowId: id };
+}
+
+async function closeLinkedWindow(message) {
+  const key = String(message.key || message.url || 'radonos');
+  let id = linkedWindows.get(key);
+  if (id == null) id = (await findLinkedWindow(message.url))?.id;
+  linkedWindows.delete(key);
+  if (id == null) return { ok: true, missing: true };
+  await chrome.windows.remove(id).catch(() => {});
+  return { ok: true };
+}
+
+chrome.windows?.onRemoved?.addListener?.((windowId) => {
+  for (const [key, id] of linkedWindows) {
+    if (id !== windowId) continue;
+    linkedWindows.delete(key);
+    // The RadonOS window that owns this popup can update its panel immediately.
+    chrome.runtime.sendMessage({ type: 'LINKED_WINDOW_REMOVED', key }).catch(() => {});
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   const { type } = message || {};
 
@@ -197,6 +284,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           .filter((t) => t.url && !/^(chrome|edge|about|devtools|view-source|chrome-extension):/i.test(t.url))
           .map((t) => ({ id: t.id, title: t.title, url: t.url, active: t.active })),
       }))
+      .catch((err) => sendResponse({ ok: false, error: String(err) }));
+    return true;
+  }
+
+  if (type === 'LINKED_WINDOW_OPEN') {
+    openLinkedWindow(message)
+      .then((res) => sendResponse(res))
+      .catch((err) => sendResponse({ ok: false, error: String(err) }));
+    return true;
+  }
+
+  if (type === 'LINKED_WINDOW_UPDATE') {
+    updateLinkedWindow(message)
+      .then((res) => sendResponse(res))
+      .catch((err) => sendResponse({ ok: false, error: String(err) }));
+    return true;
+  }
+
+  if (type === 'LINKED_WINDOW_CLOSE') {
+    closeLinkedWindow(message)
+      .then((res) => sendResponse(res))
       .catch((err) => sendResponse({ ok: false, error: String(err) }));
     return true;
   }

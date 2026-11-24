@@ -31,7 +31,7 @@
         <span data-icon="alert" data-size="15"></span>
         <span>This site may refuse to be embedded in a frame.</span>
         <span class="ros-spacer"></span>
-        <button class="ros-btn sm ghost" id="warning-external">Open in a real tab</button>
+        <button class="ros-btn sm ghost" id="warning-external">Open in a linked window</button>
       </div>
 
       <div class="browser-home" id="home">
@@ -46,7 +46,7 @@
           <div class="quick-grid" id="quick-grid"></div>
           <div class="home-note">
             <span data-icon="info" data-size="15"></span>
-            <span>Some large sites (Google, YouTube, GitHub…) block being framed. RadonOS detects them and offers to open a real tab instead.</span>
+            <span>Some large sites (Google, YouTube, GitHub…) block being framed. RadonOS detects them and opens them in a linked window that follows this window’s size.</span>
           </div>
         </div>
       </div>
@@ -57,13 +57,15 @@
 
       <div class="blocked-panel" id="blocked" hidden>
         <div class="blocked-card">
-          <span class="blocked-icon" data-icon="shield" data-size="26"></span>
-          <div class="blocked-title">This site can’t run inside RadonOS</div>
+          <span class="blocked-icon" data-icon="external" data-size="26"></span>
+          <div class="blocked-title" id="blocked-title">This site needs its own window</div>
           <p class="ros-hint" id="blocked-text">The site sends an <code>X-Frame-Options</code> /
-          <code>Content-Security-Policy</code> header that forbids embedding, so the browser
-          refuses to render it in a window frame.</p>
+          <code>Content-Security-Policy</code> header that forbids embedding, so it runs in a
+          browser window of its own.</p>
+          <div class="linked-state" id="linked-size">Linked window closed</div>
           <div class="blocked-actions">
-            <button class="ros-btn primary" id="blocked-external"><span data-icon="external" data-size="15"></span> Open in a real tab</button>
+            <button class="ros-btn primary" id="blocked-focus"><span data-icon="external" data-size="15"></span><span id="linked-action">Open linked window</span></button>
+            <button class="ros-btn ghost" id="blocked-tab">Open in a new tab</button>
             <button class="ros-btn ghost" id="blocked-try">Try to embed anyway</button>
             <button class="ros-btn ghost" id="blocked-copy"><span data-icon="copy" data-size="15"></span> Copy URL</button>
           </div>

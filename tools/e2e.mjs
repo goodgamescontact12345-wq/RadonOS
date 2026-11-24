@@ -606,16 +606,31 @@ const SCENARIOS = [
     },
   },
   {
-    name: 'Browser app detects frame-blocking sites and loads embeddable ones',
+    name: 'Browser app detects frame-blocking sites and links a window that matches its size',
     script: `(async () => {
       const w = window.RadonOS.wm.open('browser', { args: { url: 'https://github.com/' } });
       await new Promise((r) => setTimeout(r, 1400));
       const d = w.iframe.contentDocument;
       const blocked = {
         visible: !d.querySelector('#blocked').hidden,
+        title: d.querySelector('#blocked-title')?.textContent,
         text: d.querySelector('#blocked-text')?.textContent.trim().slice(0, 60),
         status: d.querySelector('#status-text')?.textContent,
       };
+      const linked = () => ({
+        width: Number(d.querySelector('#blocked').dataset.linkedWidth),
+        height: Number(d.querySelector('#blocked').dataset.linkedHeight),
+        note: d.querySelector('#linked-size')?.textContent,
+        label: d.querySelector('#linked-action')?.textContent,
+      });
+      const atOpen = linked();
+      const openRect = { ...window.RadonOS.wm.find(w.id).rect };
+
+      window.RadonOS.wm.tile(w.id, 'left');
+      await new Promise((r) => setTimeout(r, 700));
+      const afterTile = linked();
+      const tiledRect = { ...window.RadonOS.wm.find(w.id).rect };
+
       const address = d.querySelector('#address');
       address.value = 'example.com';
       address.dispatchEvent(new d.defaultView.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -624,13 +639,20 @@ const SCENARIOS = [
         frameVisible: !d.querySelector('#frame').hidden,
         url: d.querySelector('#frame').src,
         status: d.querySelector('#status-text')?.textContent,
+        panelHidden: d.querySelector('#blocked').hidden,
       };
-      return { blocked, loaded, home: !d.querySelector('#home').hidden };
+      return { blocked, loaded, atOpen, openRect, afterTile, tiledRect, home: !d.querySelector('#home').hidden };
     })()`,
     assert(report) {
       return [
         [report.blocked.visible, `github.com flagged as non-embeddable (${report.blocked.status})`],
+        [report.blocked.title === 'Opened in a linked window', `panel reads “${report.blocked.title}”`],
+        [report.atOpen.width === report.openRect.width && report.atOpen.height === report.openRect.height,
+          `linked window opened at the window size (${report.atOpen.note})`],
+        [report.afterTile.width === report.tiledRect.width && report.afterTile.height === report.tiledRect.height,
+          `linked window followed the resize to ${report.afterTile.width}×${report.afterTile.height}`],
         [report.loaded.frameVisible && report.loaded.url.startsWith('https://example.com'), `example.com loaded (${report.loaded.status})`],
+        [report.loaded.panelHidden, 'navigating to an embeddable page leaves the linked-window panel'],
       ];
     },
   },

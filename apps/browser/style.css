@@ -102,3 +102,17 @@
 .blocked-icon { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; background: color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
 .blocked-title { font-size: 15px; font-weight: 600; color: var(--text); }
 .blocked-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
+.linked-state {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--success);
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+.linked-state.closed {
+  color: var(--text-faint);
+  border-color: var(--border);
+  background: transparent;
+}
