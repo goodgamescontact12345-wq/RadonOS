@@ -14,6 +14,7 @@
  *   node tools/build-extension.mjs
  *   node tools/build-extension.mjs --out /tmp/radonos.zip
  */
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -124,6 +125,139 @@ function zip(entries) {
   return Buffer.concat([...locals, directory, end]);
 }
 
+/* ------------------------------------------------------------------ crx3 */
+/** `Cr24` + version 3 + header length + protobuf header + the same zip. */
+const CRX_MAGIC = Buffer.from('Cr24');
+const SIGNATURE_CONTEXT = Buffer.from('CRX3 SignedData\x00', 'binary');
+
+function varint(value) {
+  const bytes = [];
+  let rest = value;
+  while (rest > 0x7F) {
+    bytes.push((rest & 0x7F) | 0x80);
+    rest = Math.floor(rest / 128);
+  }
+  bytes.push(rest);
+  return Buffer.from(bytes);
+}
+
+/** A protobuf length-delimited field. CRX3 only needs this shape. */
+const bytesField = (tag, buffer) => Buffer.concat([varint((tag << 3) | 2), varint(buffer.length), buffer]);
+
+function readVarint(buffer, start) {
+  let value = 0;
+  let shift = 1;
+  let offset = start;
+  let byte = 0x80;
+  while (byte & 0x80) {
+    byte = buffer[offset];
+    offset += 1;
+    value += (byte & 0x7F) * shift;
+    shift *= 128;
+  }
+  return [value, offset];
+}
+
+/** Every length-delimited field of a protobuf message, in order. */
+function readFields(buffer) {
+  const fields = [];
+  let offset = 0;
+  while (offset < buffer.length) {
+    const [key, afterKey] = readVarint(buffer, offset);
+    const field = Math.floor(key / 8);
+    const wire = key & 7;
+    if (wire === 2) {
+      const [length, start] = readVarint(buffer, afterKey);
+      fields.push({ field, value: buffer.subarray(start, start + length) });
+      offset = start + length;
+    } else if (wire === 0) {
+      offset = readVarint(buffer, afterKey)[1];
+    } else {
+      throw new Error(`unsupported protobuf wire type ${wire}`);
+    }
+  }
+  return fields;
+}
+
+/** `a`-`p` spelling of a 16-byte extension id, the way Chrome shows it. */
+const extensionId = (id) => [...id]
+  .map((byte) => 'abcdefghijklmnop'[byte >> 4] + 'abcdefghijklmnop'[byte & 15])
+  .join('');
+
+/** Signing key: reused from `path`, or generated once and kept there. */
+async function privateKeyPem(path) {
+  try {
+    return await readFile(path, 'utf8');
+  } catch {
+    const { privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
+    await writeFile(path, privateKey, { mode: 0o600 });
+    return privateKey;
+  }
+}
+
+function signedHeaderData(crxId) {
+  return bytesField(1, crxId);
+}
+
+function signatureInput(header, archive) {
+  const length = Buffer.alloc(4);
+  length.writeUInt32LE(header.length);
+  return Buffer.concat([SIGNATURE_CONTEXT, length, header, archive]);
+}
+
+async function packCrx(archive, keyPath) {
+  const pem = await privateKeyPem(keyPath);
+  const key = createPrivateKey(pem);
+  const publicDer = createPublicKey(key).export({ type: 'spki', format: 'der' });
+  const crxId = createHash('sha256').update(publicDer).digest().subarray(0, 16);
+
+  const header = signedHeaderData(crxId);
+  const signature = sign('sha256', signatureInput(header, archive), key);
+  const proof = Buffer.concat([bytesField(1, publicDer), bytesField(2, signature)]);
+  const message = Buffer.concat([bytesField(2, proof), bytesField(10000, header)]);
+
+  const prefix = Buffer.alloc(12);
+  CRX_MAGIC.copy(prefix, 0);
+  prefix.writeUInt32LE(3, 4);
+  prefix.writeUInt32LE(message.length, 8);
+
+  return { crx: Buffer.concat([prefix, message, archive]), id: extensionId(crxId) };
+}
+
+/** Read the file back the way Chrome does, and check the signature covers it. */
+function verifyCrx(buffer) {
+  if (!buffer.subarray(0, 4).equals(CRX_MAGIC)) return 'missing Cr24 magic';
+  if (buffer.readUInt32LE(4) !== 3) return 'not a CRX3 file';
+  const headerLength = buffer.readUInt32LE(8);
+  const header = buffer.subarray(12, 12 + headerLength);
+  const archive = buffer.subarray(12 + headerLength);
+  if (archive.readUInt32LE(0) !== 0x04034B50) return 'payload is not a zip';
+
+  const fields = readFields(header);
+  const signed = fields.find((entry) => entry.field === 10000)?.value;
+  const proof = fields.find((entry) => entry.field === 2)?.value;
+  if (!signed || !proof) return 'header has no signed data';
+
+  const proofFields = readFields(proof);
+  const publicDer = proofFields.find((entry) => entry.field === 1)?.value;
+  const signature = proofFields.find((entry) => entry.field === 2)?.value;
+  if (!publicDer || !signature) return 'header has no key proof';
+
+  const publicKey = createPublicKey({ key: publicDer, format: 'der', type: 'spki' });
+  if (!verify('sha256', signatureInput(signed, archive), publicKey, signature)) {
+    return 'signature does not match the archive';
+  }
+
+  const crxId = readFields(signed).find((entry) => entry.field === 1)?.value;
+  const expected = createHash('sha256').update(publicDer).digest().subarray(0, 16);
+  if (!crxId || !Buffer.from(crxId).equals(expected)) return 'extension id does not match the key';
+  return null;
+}
+
 const outIndex = process.argv.indexOf('--out');
 const manifest = JSON.parse(await readFile(join(ROOT, 'manifest.json'), 'utf8'));
 const OUT = outIndex >= 0
@@ -156,3 +290,22 @@ const kib = (bytes) => `${(bytes / 1024).toFixed(1)} KiB`;
 const raw = files.reduce((total, file) => total + file.data.length, 0);
 console.log(`Packed ${files.length} files · ${kib(raw)} → ${kib(archive.length)} → ${relative(ROOT, OUT) || OUT}`);
 console.log('Unzip it, then load the folder with "Load unpacked" (chrome://extensions, Developer mode).');
+
+if (process.argv.includes('--crx')) {
+  const keyIndex = process.argv.indexOf('--key');
+  const keyPath = keyIndex >= 0
+    ? process.argv[keyIndex + 1]
+    : join(ROOT, 'dist', 'radonos-extension.pem');
+  const crxOut = OUT.replace(/\.zip$/i, '') + '.crx';
+
+  const { crx, id } = await packCrx(archive, keyPath);
+  const problem = verifyCrx(crx);
+  if (problem) {
+    console.error(`Refusing to write a CRX that does not verify: ${problem}`);
+    process.exit(1);
+  }
+  await writeFile(crxOut, crx);
+  console.log(`Signed  · id ${id} → ${kib(crx.length)} → ${relative(ROOT, crxOut)}`);
+  console.log(`Key     · ${relative(ROOT, keyPath)} (keep it: the id above comes from this key)`);
+  console.log('Drag the .crx onto chrome://extensions — Chromium blocks off-store installs on Windows and macOS.');
+}

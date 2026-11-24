@@ -72,8 +72,12 @@ attribute that flips the floating taskbar, window layer, start menu and popovers
    page to **Open link in RadonOS** or **Save link to RadonOS bookmarks**.
 
 To carry the extension to another machine, pack it first: `npm run ext:build` writes
-`dist/radonos-extension-<version>.zip` (49 files, ~180 KiB, no tooling or docs inside). Unzip it and
-load the unpacked folder with the same step 3; the same archive is what a store listing takes.
+`dist/radonos-extension-<version>.zip` (49 files, ~180 KiB, no tooling or docs inside) and the same
+tree signed as `dist/radonos-extension-<version>.crx` (CRX3). Unzip the archive and load the folder
+with step 3 — the zip is also what a store listing takes. A `.crx` installs by dragging it onto
+`chrome://extensions` on Linux, while Chrome and Edge refuse off-store CRX installs on Windows and
+macOS; there, unzip and load unpacked. The signing key is `dist/radonos-extension.pem` (git-ignored):
+keep it, and every build with it keeps the same extension id.
 
 **Verify it is live** (takes 30 seconds):
 
