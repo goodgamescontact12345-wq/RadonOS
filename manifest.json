@@ -35,11 +35,13 @@
     "activeTab",
     "alarms",
     "notifications",
-    "contextMenus"
+    "contextMenus",
+    "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": [
     "https://api.open-meteo.com/*",
-    "https://geocoding-api.open-meteo.com/*"
+    "https://geocoding-api.open-meteo.com/*",
+    "<all_urls>"
   ],
   "commands": {
     "open-radonos": {

@@ -8,6 +8,7 @@
  *  - a tiny message bridge for the new tab page
  */
 import { DEFAULT_SETTINGS } from './shared/settings.js';
+import { ensureFrameRules } from './shared/framePolicy.js';
 
 const NEWTAB_PATH = 'newtab/index.html';
 const BADGE_ALARM = 'radonos-badge-tick';
@@ -101,6 +102,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   });
 
   chrome.alarms.create(BADGE_ALARM, { periodInMinutes: 1 });
+  // Dynamic rules survive a worker restart but not a reinstall, and an update
+  // is the moment a new browser might refuse them, so refresh them here.
+  await ensureFrameRules();
   if (details.reason === 'install') {
     await openDesktop();
   }
@@ -109,6 +113,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
 chrome.runtime.onStartup.addListener(() => {
   chrome.alarms.create(BADGE_ALARM, { periodInMinutes: 1 });
+  void ensureFrameRules();
   void updateBadge();
 });
 
@@ -285,6 +290,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           .map((t) => ({ id: t.id, title: t.title, url: t.url, active: t.active })),
       }))
       .catch((err) => sendResponse({ ok: false, error: String(err) }));
+    return true;
+  }
+
+  if (type === 'FRAME_UNLOCK') {
+    // The browser asks once per desktop load whether it can draw frame-blocked
+    // pages itself; `ok: false` sends them to a linked window instead.
+    ensureFrameRules()
+      .then((res) => sendResponse(res))
+      .catch((err) => sendResponse({ ok: false, reason: String(err) }));
     return true;
   }
 

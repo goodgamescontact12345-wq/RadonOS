@@ -30,7 +30,9 @@ const calls = {
   windowsCreated: [],
   windowsUpdated: [],
   windowsRemoved: [],
+  dnrUpdates: [],
 };
+let dynamicRules = [];
 
 const settle = (ms = 40) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 
@@ -141,6 +143,16 @@ globalThis.chrome = {
   commands: {
     onCommand: { addListener: (fn) => listeners.command.push(fn) },
   },
+  declarativeNetRequest: {
+    getDynamicRules: () => Promise.resolve(dynamicRules.map((rule) => ({ ...rule }))),
+    updateDynamicRules: ({ removeRuleIds = [], addRules = [] }) => {
+      calls.dnrUpdates.push({ removeRuleIds, addRules });
+      dynamicRules = dynamicRules
+        .filter((rule) => !removeRuleIds.includes(rule.id))
+        .concat(addRules);
+      return Promise.resolve();
+    },
+  },
 };
 
 /* ------------------------------------------------------------------- run */
@@ -165,6 +177,21 @@ check('install registers four context menus', calls.menus.length === 4,
   calls.menus.map((menu) => menu.id).join(', '));
 check('install opens the desktop exactly once', calls.tabsCreated.length === 1
   && calls.tabsCreated[0].url.includes('/newtab/index.html'), calls.tabsCreated[0]?.url);
+
+// --- frame-blocking headers
+const stripped = dynamicRules.find((rule) => rule.id === 4241);
+const removed = (stripped?.action?.responseHeaders || []).filter((header) => header.operation === 'remove');
+check('install strips the headers that forbid framing',
+  stripped?.action?.type === 'modifyHeaders'
+  && ['x-frame-options', 'content-security-policy'].every((name) => removed.some((header) => header.header.toLowerCase() === name))
+  && stripped.condition?.resourceTypes?.includes('sub_frame'),
+  removed.map((header) => header.header).join(', '));
+check('the rule only touches the hosts the browser knows block framing',
+  stripped?.condition?.requestDomains?.includes('open.spotify.com')
+  && stripped.condition.requestDomains.includes('github.com')
+  && new Set(stripped.condition.requestDomains).size === stripped.condition.requestDomains.length
+  && !stripped.condition.resourceTypes.includes('main_frame'),
+  `${stripped?.condition?.requestDomains?.length} domains`);
 
 // --- badge clock
 store.settings = { ...store.settings, badgeClock: true, clock24: true };
@@ -211,6 +238,14 @@ check('GET_TABS returns non-extension tabs only', tabsResponse?.ok === true
 
 const openResponse = await sendMessage({ type: 'OPEN_APP', app: 'notepad', params: { path: '/Documents/x.txt' } });
 check('OPEN_APP resolves with ok', openResponse?.ok === true);
+
+const beforeRuleWrites = calls.dnrUpdates.length;
+const unlockResponse = await sendMessage({ type: 'FRAME_UNLOCK' });
+check('FRAME_UNLOCK confirms the rule without rewriting it',
+  unlockResponse?.ok === true
+  && dynamicRules.filter((rule) => rule.id === 4241).length === 1
+  && calls.dnrUpdates.length === beforeRuleWrites,
+  JSON.stringify(unlockResponse));
 
 calls.notifications.length = 0;
 const notifyResponse = await sendMessage({ type: 'NOTIFY', title: 'Hi', body: 'There' });

@@ -3,20 +3,11 @@ import { QUICK_LINKS } from '../../shared/registry.js';
 import { loadSettings, getSettings, updateSettings } from '../../shared/settings.js';
 import { initTheme } from '../../shared/theme.js';
 import { paintIcons, toast, escapeHtml, openApp } from '../../shared/ui.js';
-import { tabs } from '../../shared/platform.js';
+import { isExtension, runtime, tabs } from '../../shared/platform.js';
 import { LinkedWindow } from '../../shared/embedWindow.js';
+import { EMBED_BLOCKED } from '../../shared/framePolicy.js';
 
 const $ = (selector) => document.querySelector(selector);
-
-/** Hosts that are known to send frame-blocking headers. */
-const EMBED_BLOCKED = new Set([
-  'google.com', 'www.google.com', 'youtube.com', 'www.youtube.com', 'github.com',
-  'twitter.com', 'x.com', 'reddit.com', 'www.reddit.com', 'instagram.com',
-  'facebook.com', 'www.facebook.com', 'netflix.com', 'linkedin.com', 'amazon.com',
-  'stackoverflow.com', 'tiktok.com', 'discord.com', 'whatsapp.com', 'openai.com',
-  'chat.openai.com', 'mail.google.com', 'drive.google.com', 'figma.com',
-  'open.spotify.com', 'spotify.com', 'notion.so', 'medium.com', 'duckduckgo.com',
-]);
 
 const state = {
   history: [],
@@ -31,6 +22,18 @@ const home = $('#home');
 const blocked = $('#blocked');
 const address = $('#address');
 const linked = new LinkedWindow();
+
+/**
+ * Whether this build can drop frame-blocking headers, which is what lets the
+ * list below load in this window instead of a separate one. The extension asks
+ * its service worker, which installs the declarativeNetRequest rule; the hosted
+ * build has no server to rewrite responses and answers false.
+ */
+const frameUnlockReady = (async () => {
+  if (!isExtension) return false;
+  const result = await runtime.send({ type: 'FRAME_UNLOCK' });
+  return result?.ok === true;
+})().catch(() => false);
 
 /* ------------------------------------------------------------- utilities */
 function normalize(input) {
@@ -138,7 +141,7 @@ function showBlocked(url, { opened = false } = {}) {
   updateNavButtons();
 }
 
-function navigate(rawUrl, { push = true, force = false } = {}) {
+async function navigate(rawUrl, { push = true, force = false } = {}) {
   const url = normalize(rawUrl);
   if (!url) return;
   clearTimeout(state.timeout);
@@ -156,11 +159,16 @@ function navigate(rawUrl, { push = true, force = false } = {}) {
   const shell = $('#address-shell');
   shell.classList.toggle('secure', url.startsWith('https://'));
 
-  if (!force && isBlocked(url)) {
+  // A site known to block framing still loads here whenever this build can
+  // strip those headers; only a build that cannot needs the external window.
+  if (!force && isBlocked(url) && !(await frameUnlockReady)) {
+    if (state.current !== url) return;
     const opened = openLinkedWindow(url);
     showBlocked(url, { opened });
     return;
   }
+  // The desktop moved on while the capability was being checked.
+  if (state.current !== url) return;
 
   // RadonOS can frame this page again, so the external window is not needed.
   if (linked.isOpen) linked.close();

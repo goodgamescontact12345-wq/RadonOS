@@ -47,7 +47,7 @@ desktop, published as a static app on GitHub Pages (see [Hosted version](#hosted
 | **Notepad** | Opens and saves into the virtual file system, save-as, download, open-by-search dialog, word wrap and font toggles, live char/word/line counts, `Ctrl+S`/`Ctrl+O`/`Ctrl+N`, "show in Files". |
 | **Terminal** | 27 built-in commands over the *real* file system with quoting, `>` redirection, tab completion, history, `Ctrl+L`/`Ctrl+C`: `ls -l`, `cat`, `mkdir`, `touch`, `rm`, `mv`, `cp`, `open`, `theme`, `wallpaper`, `notify`, `calc`, `df`, `mem`, `uname`, `vfs` (ls/cat/write/rm/du/find/dotfiles), `radonpkg`, `neofetch`, `tabs`, `exit`. Installed packages extend the command table live. |
 | **radonpkg** | A real (offline) package manager: `radonpkg search|install|remove|list|info` installs six CLI tools (`json`, `base64`, `uuid`, `hash`, `sysmon`, `tidy`), writes a manifest to `/System/Packages`, and retires the command again on removal. |
-| **Browser** | Address bar with search fallback, history, quick-link home screen, bookmark saving, and honest handling of frame-blocking sites: when a site sends `X-Frame-Options` / CSP `frame-ancestors`, RadonOS opens it in a **linked browser window** that starts at the RadonOS window's size and position, follows every resize and move, and closes with the window (`shared/embedWindow.js`). |
+| **Browser** | Address bar with search fallback, history, quick-link home screen, bookmark saving, and real embedding for frame-blocking sites: in the extension a `declarativeNetRequest` rule drops `X-Frame-Options` / CSP `frame-ancestors` from frames RadonOS itself opened (`shared/framePolicy.js`), so Google, YouTube or GitHub load in the window; where those headers cannot be stripped, a **linked browser window** takes over at the RadonOS window's size and position and follows every resize and move (`shared/embedWindow.js`). |
 | **Media** | Playlist from `/Music` and `/Videos`, audio player with a canvas visualiser (Web Audio analyser, synthesised fallback for CORS-restricted streams), video element, stream URLs, YouTube embeds, shuffle/repeat/volume/seek. |
 | **Settings** | Five categories that drill into subcategory pages with a breadcrumb and circular back button. Appearance (theme dark/light/auto, 8 accents + custom colour, 4 palettes, liquid-glass blur/saturation/brightness, wallpaper presets/URL/upload, dim/blur), Desktop (widgets, weather city + units, icon labels, layout reset, dock position + app-strip alignment, boot animation, reduced motion), System (user name, clock format, badge clock, sounds and volume, lock/restart), Storage (usage bars, JSON export/import, trash cleanup, reset, full erase) and About (runtime stats, shortcuts, features). |
 
@@ -230,6 +230,8 @@ radonos/
 │   ├── registry.js          App catalogue (id, icon, size, category) used by desktop/start menu/terminal
 │   ├── icons.js             Inline SVG icon set + RadonOS atom mark
 │   ├── ui.js                Toasts, modals, prompts, confirms, context menus, formatters, app helpers
+│   ├── framePolicy.js       Frame-blocking headers, and the declarativeNetRequest rule that
+│   │                        drops them from frames a RadonOS page opened
 │   ├── embedWindow.js       Linked browser windows for frame-blocked pages: opens at the
 │   │                        owning window's bounds and follows every resize and move
 │   ├── audio.js             Synthesised OS sounds behind a master volume
@@ -315,8 +317,8 @@ Everything below is runnable and was executed against this tree.
 
 | Suite | Command | Coverage |
 | --- | --- | --- |
-| Structural | `npm run validate` | Every project file (59 at the time of writing); manifest parses, MV3 version, required permissions, every manifest/HTML/ES-module reference resolves, no inline handlers, `javascript:` URLs, `eval` or `new Function`. |
-| Service worker | `npm run test:sw` | 21 checks against a chrome.* stub: install defaults, alarm + badge clock, four context menus, link/bookmark hand-off, `GET_TABS` filtering, `OPEN_APP`, `NOTIFY`, `SAVE_BOOKMARK` (incl. idempotency), linked popup windows (open at the RadonOS window bounds, resize, close), unknown messages, command and toolbar entry points. |
+| Structural | `npm run validate` | Every project file (58 at the time of writing); manifest parses, MV3 version, required permissions, every manifest/HTML/ES-module reference resolves, no inline handlers, `javascript:` URLs, `eval` or `new Function`. |
+| Service worker | `npm run test:sw` | 24 checks against a chrome.* stub: install defaults, alarm + badge clock, four context menus, link/bookmark hand-off, `GET_TABS` filtering, `OPEN_APP`, `NOTIFY`, `SAVE_BOOKMARK` (incl. idempotency), the frame-header rule (removes `X-Frame-Options`/CSP for RadonOS-initiated sub-frames only) and the `FRAME_UNLOCK` report that reads it back without rewriting it, linked popup windows (open at the RadonOS window bounds, resize, close), unknown messages, command and toolbar entry points. |
 | Platform layer | `npm run test:platform` | 20 checks covering both branches of `shared/platform.js`: chrome.storage round-trips and change events, tab search/query/open, runtime messaging, extension URL building; then the localStorage/BroadcastChannel fallback used by the dev server. |
 | End-to-end | `npm run e2e:web` | 21 scenario groups in a real headless Chromium driving the actual UI: shell boot, Files listing, Notepad file load, Terminal commands creating real files, window drag/resize/maximize/minimize/focus/work-area clamping, start-menu search across apps/actions/files, tray calendar + notifications + theme persistence + lock screen, full VFS round-trip (create/rename/trash/restore/search), every Settings category drill-down and back, Browser embed detection + linked-window sizing, Media library + transport, window tiling (halves/quadrants/thirds + `Alt`+`Shift` shortcut), **command-bar ranking/execution/`Super`+`Space`**, **control-center palette + top dock + glass blur persistence**, **storageManager + radonpkg round-trip**, **Terminal `uname`/`vfs`/`radonpkg`**, and session restore after a reload. |
 | Hosted build | `npm run site:test` | 52 checks against a running GitHub Pages build: the `/` redirect document (and its no-JS fallback), the redirect script resolving the desktop **and keeping `?app=`/hash** (executed against stubs, not just grepped), `404.html` references loading **from a deep path**, trailing-slash directory redirects, POST rejection, 404s, every document and every referenced asset (status + MIME), no root-absolute URLs outside the site prefix, no `chrome-extension://` links, no tooling/keys/maps/Worker leftovers, and `.nojekyll` present. |
@@ -358,14 +360,20 @@ check those.
 
 ## Limitations and roadmap
 
-- Sites that send `X-Frame-Options`/CSP frame restrictions (Google, YouTube, GitHub, …) cannot be
-  embedded in a window. RadonOS detects the common ones up front and opens them in a linked browser
-  window that matches the RadonOS window's size and position, tracks resizes and moves, and closes
-  with the window; a load that never finishes offers the same window from the banner. A frame cannot
-  be inspected from script, so a blocking site outside the known list is only caught when it fails to
-  load in time. The extension build drives a real `chrome.windows` popup and can resize it at any
-  point; the hosted/dev build uses `window.open`, which the browser only lets the page resize while
-  the popup is still same-origin (after that it re-opens the named window at the new size).
+- Pages that send `X-Frame-Options`/CSP `frame-ancestors` (Google, YouTube, GitHub, …) can only be
+  drawn in a window when those headers never arrive. The extension makes that happen: one dynamic
+  `declarativeNetRequest` rule removes them from sub-frame responses of the hosts in the known list
+  (`shared/framePolicy.js`), so those pages load in the browser window itself, including links
+  followed inside the frame. It costs the framed page its own script policy, and a site that tries to
+  frame-bust in JavaScript is stopped by the frame's sandbox, which cannot navigate the desktop away.
+  The rule is profile-wide for those hosts (it is scoped by resource type, not by tab), which is why
+  it names domains instead of asking for every site. The hosted
+  build is only files on a static host and cannot strip anything, so there the fallback is a linked
+  browser window that matches the RadonOS window's size and position and tracks resizes; a load that
+  never finishes offers the same window from the banner. The extension drives that popup through
+  `chrome.windows` and can resize it at any point; the hosted/dev build uses `window.open`, which the
+  browser only lets the page resize while the popup is still same-origin (after that it re-opens the
+  named window at the new size).
 - The virtual file system is per browser profile and is not synced anywhere. Export/import in
   Settings → Storage covers settings, folders and text files (binaries stay local).
 - `performance.memory` is Chromium-only (and may report coarse values); the widgets degrade gracefully.
