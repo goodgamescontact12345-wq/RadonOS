@@ -157,15 +157,21 @@
   </div>
 
   <!-- Lock screen -->
-  <div class="lock-screen" id="lock-screen" hidden>
+  <div class="lock-screen" id="lock-screen" role="dialog" aria-modal="true" aria-label="Lock screen" hidden>
     <div class="lock-inner">
       <div class="lock-time" id="lock-time">--:--</div>
       <div class="lock-date" id="lock-date"></div>
-      <div class="lock-user">
+      <div class="lock-card">
         <span class="lock-avatar" id="lock-avatar">RU</span>
-        <span id="lock-username">Radon User</span>
+        <span class="lock-user-text">
+          <span class="lock-name" id="lock-username">Radon User</span>
+          <span class="lock-sub" id="lock-sub">Session locked</span>
+        </span>
+        <button class="lock-unlock" id="lock-unlock" type="button">
+          <span data-icon="lock" data-size="14"></span>Unlock
+        </button>
       </div>
-      <div class="lock-hint">Click anywhere or press any key to unlock</div>
+      <div class="lock-hint"><kbd>Enter</kbd> or click anywhere to unlock</div>
     </div>
   </div>
 

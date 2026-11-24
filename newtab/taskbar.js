@@ -461,19 +461,42 @@ export function createTaskbar({ wm, desktop, widgets }) {
     closeStartMenu();
     closePopover();
     locked = true;
-    lockScreen.hidden = false;
     updateClock();
+
+    // What the session looks like from the other side of the lock.
+    const openWindows = wm.windows.size;
+    $('#lock-sub').textContent = openWindows
+      ? `${openWindows} window${openWindows === 1 ? '' : 's'} open`
+      : 'Nothing open';
+
+    lockScreen.hidden = false;
+    lockScreen.classList.remove('leaving');
+    // Focus the button, so Enter and Space do the obvious thing.
+    $('#lock-unlock')?.focus({ preventScroll: true });
 
     const unlock = () => {
       if (!locked) return;
       locked = false;
-      lockScreen.hidden = true;
-      playChime();
       document.removeEventListener('keydown', onKeyUnlock);
+      document.removeEventListener('pointerdown', unlock);
+      lockScreen.classList.add('leaving');
+      setTimeout(() => {
+        lockScreen.hidden = true;
+        lockScreen.classList.remove('leaving');
+      }, 210);
+      playChime();
+      // Hand the keyboard back to whatever was in front before the lock.
+      const active = wm.activeId ? wm.windows.get(wm.activeId) : null;
+      if (active && !active.minimized) wm.focus(active.id);
     };
-    const onKeyUnlock = () => unlock();
+    // Only a deliberate unlock counts: a bare modifier or Tab should not do it.
+    const idleKeys = new Set(['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'OS']);
+    const onKeyUnlock = (event) => {
+      if (idleKeys.has(event.key)) return;
+      unlock();
+    };
     setTimeout(() => {
-      document.addEventListener('pointerdown', unlock, { once: true });
+      document.addEventListener('pointerdown', unlock);
       document.addEventListener('keydown', onKeyUnlock);
     }, 180);
   }
