@@ -31,6 +31,13 @@ function desktopHost() {
   return window.parent && window.parent !== window ? window.parent : null;
 }
 
+/** The desktop shell (window manager + chrome switches), when there is one. */
+function desktopApi() {
+  const api = desktopHost()?.RadonOS;
+  const manager = api?.wm || api?.windows;
+  return manager && typeof manager.minimize === 'function' ? { api, manager } : null;
+}
+
 /** The RadonOS window that owns this document, or null when opened standalone. */
 export function ownerWindow() {
   const host = desktopHost();
@@ -93,6 +100,7 @@ export class LinkedWindow extends EventTarget {
     this.lastSent = 0;
     this.lastOwner = null;
     this.signature = '';
+    this.ownerHidden = false;
     this.onUnload = () => this.close();
     // The service worker broadcasts when a chrome popup window disappears, so
     // the RadonOS panel can stop claiming it is open without polling.
@@ -100,6 +108,7 @@ export class LinkedWindow extends EventTarget {
       ? runtime.onMessage((message) => {
         if (message?.type !== 'LINKED_WINDOW_REMOVED' || message.key !== this.key) return;
         this.opened = false;
+        this.showOwner();
         this.emitState();
       })
       : null;
@@ -130,7 +139,10 @@ export class LinkedWindow extends EventTarget {
         url,
         ...this.bounds,
       }).then((result) => {
-        if (result?.ok) return;
+        if (result?.ok) {
+          this.hideOwner();
+          return;
+        }
         // No service worker handler (older install) or chrome.windows refused:
         // fall back to a script-opened popup. That needs a user gesture, so the
         // panel's button remains the reliable way in.
@@ -141,6 +153,7 @@ export class LinkedWindow extends EventTarget {
       });
     } else {
       this.popup = this.openPopup();
+      if (this.popup) this.hideOwner();
     }
 
     this.watch();
@@ -198,7 +211,46 @@ export class LinkedWindow extends EventTarget {
     this.opened = false;
     this.lastOwner = null;
     if (!keepUrl) this.url = null;
+    this.showOwner();
     this.emitState();
+  }
+
+  /**
+   * Step the RadonOS window out of the desktop while its page lives in another
+   * window. The site window then sits where that window was, instead of two
+   * windows stacking; closing it puts the window back.
+   */
+  hideOwner() {
+    if (this.ownerHidden) return;
+    const shell = desktopApi();
+    const id = windowId();
+    if (!shell || !id) return;
+    const win = shell.manager.find?.(id);
+    if (!win || win.minimized) return;
+    try {
+      shell.manager.minimize(id);
+      // The desktop bar would give away that this is a second window; hide it too.
+      shell.api.setChromeHidden?.(true);
+      this.ownerHidden = true;
+    } catch {
+      /* the desktop changed under us; never break the page over it */
+    }
+  }
+
+  /** Put the RadonOS window back when its page returns. */
+  showOwner() {
+    if (!this.ownerHidden) return;
+    this.ownerHidden = false;
+    const shell = desktopApi();
+    const id = windowId();
+    if (!shell || !id) return;
+    try {
+      shell.api.setChromeHidden?.(false);
+      shell.manager.restore?.(id);
+      shell.manager.focus?.(id);
+    } catch {
+      /* same as above: restoring is best effort */
+    }
   }
 
   /* -------------------------------------------------------------- tracking */
@@ -213,6 +265,11 @@ export class LinkedWindow extends EventTarget {
   sync() {
     if (!ownerWindow()) {
       // The window this popup belongs to is gone.
+      this.close();
+      return;
+    }
+    // The user closed the site window themselves: bring the RadonOS window back.
+    if (this.mode === 'popup' && this.url && (!this.popup || this.popup.closed)) {
       this.close();
       return;
     }

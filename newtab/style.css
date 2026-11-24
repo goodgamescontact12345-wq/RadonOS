@@ -323,6 +323,16 @@ body {
 .mon-foot { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-faint); margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .06); }
 
 /* --------------------------------------------------------------- taskbar */
+/* While a frame-blocked page runs in its own window (browser app), the desktop
+   bar hides so the desktop reads as that window rather than as a second place
+   the page came from. */
+html.chrome-hidden .taskbar {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition: opacity .18s var(--ease), transform .18s var(--ease);
+}
+
 .taskbar {
   position: fixed;
   left: var(--taskbar-gap);

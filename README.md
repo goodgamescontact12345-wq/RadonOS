@@ -47,7 +47,7 @@ desktop, published as a static app on GitHub Pages (see [Hosted version](#hosted
 | **Notepad** | Opens and saves into the virtual file system, save-as, download, open-by-search dialog, word wrap and font toggles, live char/word/line counts, `Ctrl+S`/`Ctrl+O`/`Ctrl+N`, "show in Files". |
 | **Terminal** | 27 built-in commands over the *real* file system with quoting, `>` redirection, tab completion, history, `Ctrl+L`/`Ctrl+C`: `ls -l`, `cat`, `mkdir`, `touch`, `rm`, `mv`, `cp`, `open`, `theme`, `wallpaper`, `notify`, `calc`, `df`, `mem`, `uname`, `vfs` (ls/cat/write/rm/du/find/dotfiles), `radonpkg`, `neofetch`, `tabs`, `exit`. Installed packages extend the command table live. |
 | **radonpkg** | A real (offline) package manager: `radonpkg search|install|remove|list|info` installs six CLI tools (`json`, `base64`, `uuid`, `hash`, `sysmon`, `tidy`), writes a manifest to `/System/Packages`, and retires the command again on removal. |
-| **Browser** | Address bar with search fallback, history, quick-link home screen, bookmark saving, and real embedding for frame-blocking sites: in the extension a `declarativeNetRequest` rule drops `X-Frame-Options` / CSP `frame-ancestors` from frames RadonOS itself opened (`shared/framePolicy.js`), so Google, YouTube or GitHub load in the window; where those headers cannot be stripped, a **linked browser window** takes over at the RadonOS window's size and position and follows every resize and move (`shared/embedWindow.js`). |
+| **Browser** | Address bar with search fallback, history, quick-link home screen, bookmark saving, and real embedding for frame-blocking sites: in the extension a `declarativeNetRequest` rule drops `X-Frame-Options` / CSP `frame-ancestors` from frames RadonOS itself opened (`shared/framePolicy.js`), so Google, YouTube or GitHub load in the window; where those headers cannot be stripped, a **linked browser window** takes over at the RadonOS window's size and position, the RadonOS window steps out of the desktop while that page is elsewhere and comes back when the site window closes (`shared/embedWindow.js`). |
 | **Media** | Playlist from `/Music` and `/Videos`, audio player with a canvas visualiser (Web Audio analyser, synthesised fallback for CORS-restricted streams), video element, stream URLs, YouTube embeds, shuffle/repeat/volume/seek. |
 | **Settings** | Five categories that drill into subcategory pages with a breadcrumb and circular back button. Appearance (theme dark/light/auto, 8 accents + custom colour, 4 palettes, liquid-glass blur/saturation/brightness, wallpaper presets/URL/upload, dim/blur), Desktop (widgets, weather city + units, icon labels, layout reset, dock position + app-strip alignment, boot animation, reduced motion), System (user name, clock format, badge clock, sounds and volume, lock/restart), Storage (usage bars, JSON export/import, trash cleanup, reset, full erase) and About (runtime stats, shortcuts, features). |
 
@@ -233,7 +233,8 @@ radonos/
 │   ├── framePolicy.js       Frame-blocking headers, and the declarativeNetRequest rule that
 │   │                        drops them from frames a RadonOS page opened
 │   ├── embedWindow.js       Linked browser windows for frame-blocked pages: opens at the
-│   │                        owning window's bounds and follows every resize and move
+│   │                        owning window's bounds, hides that window while the page is
+│   │                        elsewhere, and follows every resize and move
 │   ├── audio.js             Synthesised OS sounds behind a master volume
 │   ├── base.css / app.css   Design tokens + shared app chrome (toolbar, sidebar, lists, editor, terminal)
 │   └── ...
@@ -369,8 +370,10 @@ check those.
   The rule is profile-wide for those hosts (it is scoped by resource type, not by tab), which is why
   it names domains instead of asking for every site. The hosted
   build is only files on a static host and cannot strip anything, so there the fallback is a linked
-  browser window that matches the RadonOS window's size and position and tracks resizes; a load that
-  never finishes offers the same window from the banner. The extension drives that popup through
+  browser window that matches the RadonOS window's size and position and tracks resizes. So that the
+  page does not end up beside a duplicate of itself, the RadonOS window is minimized and the desktop
+  bar hides while the site window is open; both come back — with the panel still there — when it
+  closes. A load that never finishes offers the same window from the banner. The extension drives that popup through
   `chrome.windows` and can resize it at any point; the hosted/dev build uses `window.open`, which the
   browser only lets the page resize while the popup is still same-origin (after that it re-opens the
   named window at the new size).

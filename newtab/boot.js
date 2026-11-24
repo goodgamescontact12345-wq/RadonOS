@@ -44,6 +44,11 @@ async function boot() {
     openApp: (appId, args = {}) => wm.open(appId, { args }),
     command: (seed = '') => commandBar.open(seed),
     notify: (payload) => taskbar.notify(payload),
+    setChromeHidden: (hidden) => {
+      // A frame-blocked page runs in its own window: the bar would only give
+      // away that a second window is involved, so it steps aside with it.
+      document.documentElement.classList.toggle('chrome-hidden', !!hidden);
+    },
     showAbout: () => taskbar.showAbout(),
     updateSettings,
     resetSettings,
