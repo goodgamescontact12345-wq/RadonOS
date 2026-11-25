@@ -244,3 +244,39 @@
 
 .danger-zone { border-color: color-mix(in srgb, var(--danger) 34%, var(--border)); }
 .danger-zone .group-head .ros-icon { color: var(--danger); }
+
+/* Keyboard → Shortcuts: the binding chips are wide, monospaced pills. */
+.key-chip {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  min-width: 136px;
+  justify-content: center;
+}
+.key-chip.capturing {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.setting-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.setting-pills .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 4px 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  font-size: 11.5px;
+}
+.setting-pills .pill button {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+.setting-pills .pill button:hover { background: rgba(255, 255, 255, .12); color: var(--text); }

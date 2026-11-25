@@ -1,5 +1,6 @@
 import { icon } from '../../shared/icons.js';
 import { QUICK_LINKS } from '../../shared/registry.js';
+import { actionForEvent, comboFor, kbdHtml } from '../../shared/shortcuts.js';
 import { loadSettings, getSettings, updateSettings } from '../../shared/settings.js';
 import { initTheme } from '../../shared/theme.js';
 import { paintIcons, toast, escapeHtml } from '../../shared/ui.js';
@@ -489,45 +490,62 @@ window.addEventListener('offline', () => setStatus('Offline — RadonOS apps sti
  * which those browsers do deliver, and the `Ctrl` spellings stay for hosts
  * that pass them through (Electron, some PWA shells, the dev harness).
  */
+/**
+ * Browser shortcuts come from the same user-editable registry as the shell
+ * (Settings → Keyboard). Acting on one marks the event as used, which is how
+ * the desktop knows not to close the whole window for Alt+Shift+W.
+ */
 function onShortcut(event) {
-  const key = event.key.toLowerCase();
-  const ctrl = event.ctrlKey || event.metaKey;
+  const action = actionForEvent(event, 'browser.');
+  if (!action) return;
+  event.preventDefault();
+  event.stopPropagation();
 
-  if (event.altKey && !ctrl && !event.shiftKey) {
-    if (key === 't') { event.preventDefault(); newTab(); return; }
-    if (key === 'w') { event.preventDefault(); if (activeId) closeTab(activeId); return; }
-    if (key === 'r') { event.preventDefault(); reload(); return; }
-    if (key === 'a') { event.preventDefault(); address.focus(); address.select(); return; }
-    if (/^[1-9]$/.test(key)) {
-      event.preventDefault();
-      const tab = Number(key) === 9 ? tabList.at(-1) : tabList[Number(key) - 1];
+  switch (action) {
+    case 'browser.newTab': newTab(); break;
+    case 'browser.closeTab': if (activeId) closeTab(activeId); break;
+    case 'browser.address': address.focus(); address.select(); break;
+    case 'browser.reload': reload(); break;
+    case 'browser.back': goBack(); break;
+    case 'browser.forward': goForward(); break;
+    case 'browser.tab': {
+      const digit = /^Digit([1-9])$/.exec(event.code || '');
+      if (!digit) return;
+      const index = Number(digit[1]);
+      const tab = index === 9 ? tabList.at(-1) : tabList[index - 1];
       if (tab) activateTab(tab.id);
-      return;
+      break;
     }
+    default: break;
   }
-
-  if (ctrl && event.altKey) {
-    if (event.key === 'ArrowLeft') { event.preventDefault(); goBack(); return; }
-    if (event.key === 'ArrowRight') { event.preventDefault(); goForward(); return; }
-  }
-
-  if (ctrl && !event.altKey) {
-    if (key === 'l') { event.preventDefault(); address.focus(); address.select(); return; }
-    if (key === 'd') { event.preventDefault(); void saveBookmark(); return; }
-    if (key === 't') { event.preventDefault(); newTab(); return; }
-    if (key === 'w') { event.preventDefault(); if (activeId) closeTab(activeId); return; }
-  }
-
-  if (event.key === 'F5') reload();
 }
 
 document.addEventListener('keydown', onShortcut);
 
 /* ------------------------------------------------------------------ boot */
+const KEY_HINTS = [
+  ['browser.newTab', 'new tab'],
+  ['browser.closeTab', 'close tab'],
+  ['browser.tab', 'switch tab'],
+  ['browser.address', 'address bar'],
+  ['browser.reload', 'reload'],
+  ['browser.back', 'back'],
+];
+
+function paintKeyHints() {
+  const legend = $('#home-keys');
+  if (!legend) return;
+  legend.innerHTML = KEY_HINTS
+    .filter(([id]) => comboFor(id))
+    .map(([id, label]) => `<span>${kbdHtml(comboFor(id))} ${label}</span>`)
+    .join('');
+}
+
 (async () => {
   await loadSettings();
   await initTheme();
   paintIcons();
+  paintKeyHints();
 
   const target = new URLSearchParams(location.search).get('url');
   if (target) {

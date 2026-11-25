@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clock</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="../kit.css">
+</head>
+<body class="app app-shell">
+  <div class="app-toolbar">
+    <span class="app-title">Clock</span>
+    <div class="tb-sep"></div>
+    <button class="ros-btn sm" id="add-city" title="Add a city">Add city</button>
+    <button class="ros-btn sm ghost icon" id="remove-city" data-icon="trash" data-size="15" title="Remove the last city"></button>
+    <span class="ros-spacer"></span>
+    <span class="muted" id="clock-format"></span>
+  </div>
+
+  <div class="app-body pane">
+    <div class="clock-grid" id="clock-grid"></div>
+    <div class="stopwatch">
+      <div class="stopwatch-time big-readout" id="sw-time">00:00.0</div>
+      <div class="stopwatch-actions">
+        <button class="ros-btn" id="sw-toggle">Start</button>
+        <button class="ros-btn ghost" id="sw-reset">Reset</button>
+        <button class="ros-btn ghost" id="sw-lap">Lap</button>
+      </div>
+      <div class="empty-hint" id="sw-laps"></div>
+    </div>
+  </div>
+
+  <div class="app-status">
+    <span id="clock-status">World clocks follow your system time zone</span>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

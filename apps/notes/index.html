@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notes</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="../kit.css">
+</head>
+<body class="app app-shell">
+  <div class="app-toolbar">
+    <button class="ros-btn sm primary" id="note-new"><span data-icon="plus" data-size="14"></span> New note</button>
+    <button class="ros-btn sm ghost" id="note-desktop"><span data-icon="pin" data-size="14"></span> Pin to desktop</button>
+    <div class="tb-sep"></div>
+    <button class="ros-btn sm ghost icon" id="note-delete" data-icon="trash" data-size="15" title="Delete note"></button>
+    <span class="ros-spacer"></span>
+    <span class="muted" id="note-saved"></span>
+  </div>
+
+  <div class="app-body pane-split">
+    <aside class="pane-side" id="note-list"></aside>
+    <div class="pane-main">
+      <div class="note-editor">
+        <input class="ros-input" id="note-title" placeholder="Note title" aria-label="Note title">
+        <textarea class="ros-textarea editor" id="note-body" placeholder="Write anything — it stays in this browser profile."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-status">
+    <span id="note-status">No notes yet</span>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

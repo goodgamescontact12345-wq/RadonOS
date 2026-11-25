@@ -704,57 +704,14 @@ export class WindowManager extends EventTarget {
   }
 
   /* ---------------------------------------------------------- window keys */
+  /**
+   * Key events arrive here from the desktop document and from every app
+   * document (see bindIframeKeys). The bindings themselves are user-editable
+   * in Settings → Keyboard and live in shared/shortcuts.js; boot.js wires
+   * `keyHandler` to the shell dispatcher.
+   */
   onKey(event) {
-    if (!event.altKey || event.ctrlKey || event.metaKey) return;
-    const active = this.activeId;
-
-    // Alt+Shift tiles the focused window. Alt+Shift+↑/↓ keep their familiar
-    // maximise/restore meaning; digits cover quadrants, 5 centres the window.
-    if (event.shiftKey && active) {
-      const layouts = {
-        ArrowLeft: 'left',
-        ArrowRight: 'right',
-        Digit1: 'top-left',
-        Digit2: 'top-right',
-        Digit3: 'bottom-left',
-        Digit4: 'bottom-right',
-        Digit5: 'center',
-      };
-      if (event.code === 'ArrowUp') {
-        event.preventDefault();
-        this.maximize(active);
-        return;
-      }
-      if (event.code === 'ArrowDown') {
-        event.preventDefault();
-        this.restoreSize(active);
-        return;
-      }
-      if (event.code === 'KeyT') {
-        event.preventDefault();
-        this.cycleTile(active);
-        return;
-      }
-      const layout = layouts[event.code];
-      if (layout) {
-        event.preventDefault();
-        this.tile(active, layout);
-        return;
-      }
-    }
-
-    if (event.code === 'KeyW' && active) {
-      event.preventDefault();
-      this.close(active);
-    } else if (event.code === 'KeyM' && active) {
-      event.preventDefault();
-      this.minimize(active);
-    } else if ((event.code === 'Tab' || event.code === 'Backquote') && this.windows.size) {
-      // Alt+Tab belongs to Windows and macOS, so Alt+` is the one that reaches
-      // the page; both cycle, whichever the system lets through.
-      event.preventDefault();
-      this.cycle();
-    }
+    this.keyHandler?.(event);
   }
 
   onResize() {

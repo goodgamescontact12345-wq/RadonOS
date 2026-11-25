@@ -702,7 +702,7 @@ const SCENARIOS = [
     },
   },
   {
-    name: 'Command bar: Super+Space search, ranking and execution',
+    name: 'Command bar: Alt+Shift+K search, ranking and execution',
     script: `(async () => {
       const os = window.RadonOS;
       const bar = os.commandBar;
@@ -735,7 +735,9 @@ const SCENARIOS = [
       const windowHits = bar.results.filter((r) => r.group === 'Windows').map((r) => r.title);
       bar.close();
 
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', metaKey: true, bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'k', code: 'KeyK', altKey: true, shiftKey: true, bubbles: true, cancelable: true,
+      }));
       await new Promise((r) => setTimeout(r, 300));
       const openedByShortcut = bar.isOpen();
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -762,7 +764,7 @@ const SCENARIOS = [
         [report.paletteChanged, `command executed (${report.before} -> ${report.after})`],
         [report.closedAfterRun, 'palette closes before the command runs'],
         [report.windowHits.length >= 1, `window results: ${report.windowHits.join(', ')}`],
-        [report.openedByShortcut, 'Super+Space opens the palette'],
+        [report.openedByShortcut, 'Alt+Shift+K opens the palette'],
         [report.closedAfterEscape, 'Escape closes it'],
       ];
     },

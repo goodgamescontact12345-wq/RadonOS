@@ -3,6 +3,10 @@ import { APPS, OS_VERSION, OS_CODENAME } from '../../shared/registry.js';
 import { getSettings, loadSettings, updateSettings, resetSettings, replaceSettings } from '../../shared/settings.js';
 import { initTheme, applyWallpaper, WALLPAPERS, ACCENTS, PALETTES, DEFAULT_GLASS, GLASS_LIMITS } from '../../shared/theme.js';
 import { hasPassword, lockSettings, setPassword, clearPassword } from '../../shared/lock.js';
+import {
+  SHORTCUT_ACTIONS, SHORTCUT_GROUPS, comboFromEvent, describe, getKeys,
+  setKey, resetKey, resetKeys, conflictingAction,
+} from '../../shared/shortcuts.js';
 import { idb } from '../../shared/idb.js';
 import * as FS from '../../shared/fs.js';
 import {
@@ -118,6 +122,27 @@ const CATEGORIES = [
     ],
   },
   {
+    id: 'keyboard',
+    title: 'Keyboard',
+    sub: 'Rebind every shortcut',
+    icon: 'terminal',
+    blurb: 'Every RadonOS shortcut in one list. Defaults avoid chords that browsers or the operating system take first, so they actually arrive; click a binding and press the combination you want instead.',
+    items: [
+      {
+        id: 'shortcuts',
+        title: 'Shortcuts',
+        sub: 'Click a binding, then press the new keys',
+        icon: 'terminal',
+        render: renderKeyboardShortcuts,
+        summary: () => {
+          const keys = getKeys();
+          const changed = SHORTCUT_ACTIONS.filter((action) => keys[action.id] !== action.default).length;
+          return changed ? `${changed} changed` : 'Defaults';
+        },
+      },
+    ],
+  },
+  {
     id: 'system',
     title: 'System',
     sub: 'User, clock, sound and session',
@@ -212,7 +237,7 @@ const CATEGORIES = [
         sub: 'Every shortcut in one place',
         icon: 'terminal',
         render: renderShortcuts,
-        summary: () => '9 shortcuts',
+        summary: () => `${SHORTCUT_ACTIONS.length} shortcuts`,
       },
     ],
   },
@@ -782,29 +807,33 @@ function renderDesktopIcons(root) {
 }
 
 function renderDock(root) {
-  const settings = getSettings();
+  const pinned = Array.isArray(getSettings().dockPinned) ? getSettings().dockPinned : [];
+  const unpinned = APPS.filter((app) => !pinned.includes(app.id));
 
   root.innerHTML = group({
     title: 'Dock',
-    sub: 'Where the taskbar sits and how running apps align',
+    sub: 'The panel stays at the top; the dock holds the apps you keep close',
     iconName: 'monitor',
     body: [
       row({
-        label: 'Position',
-        hint: 'A top dock moves the window layer, popovers and start menu with it',
+        label: 'Pinned apps',
+        hint: 'Remove one with the cross, add any app from the list',
+        wide: true,
         control: `
-          <div class="ros-segmented" role="group" aria-label="Dock position">
-            ${[['bottom', 'Bottom'], ['top', 'Top']].map(([value, label]) => `
-              <button type="button" data-dock-pos="${value}" aria-pressed="${settings.dock === value}">${label}</button>`).join('')}
+          <div class="setting-pills">
+            ${pinned.map((id) => {
+    const app = APPS.find((item) => item.id === id);
+    if (!app) return '';
+    return `<span class="pill">${escapeHtml(app.name)}<button type="button" data-unpin="${id}" aria-label="Unpin ${escapeHtml(app.name)}">×</button></span>`;
+  }).join('') || '<span class="setting-hint">Nothing pinned.</span>'}
           </div>`,
       }),
       row({
-        label: 'App strip',
-        hint: 'Alignment of running-app buttons inside the dock',
+        label: 'Add to the dock',
+        hint: 'Pinned apps always show, running apps appear while open',
         control: `
-          <div class="ros-segmented" role="group" aria-label="Dock alignment">
-            ${[['start', 'Left'], ['center', 'Center'], ['end', 'Right']].map(([value, label]) => `
-              <button type="button" data-dock-align="${value}" aria-pressed="${(settings.dockAlign || 'center') === value}">${label}</button>`).join('')}
+          <div class="ros-segmented" role="group" aria-label="Pin an app">
+            ${unpinned.slice(0, 8).map((app) => `<button type="button" data-pin="${app.id}">${escapeHtml(app.name)}</button>`).join('') || '<span class="setting-hint">Every app is pinned.</span>'}
           </div>`,
       }),
     ].join(''),
@@ -812,15 +841,15 @@ function renderDock(root) {
 
   paintIcons(root);
 
-  root.querySelectorAll('[data-dock-pos]').forEach((button) => {
+  root.querySelectorAll('[data-unpin]').forEach((button) => {
     button.addEventListener('click', async () => {
-      await updateSettings({ dock: button.dataset.dockPos });
+      await updateSettings({ dockPinned: pinned.filter((id) => id !== button.dataset.unpin) });
       render();
     });
   });
-  root.querySelectorAll('[data-dock-align]').forEach((button) => {
+  root.querySelectorAll('[data-pin]').forEach((button) => {
     button.addEventListener('click', async () => {
-      await updateSettings({ dockAlign: button.dataset.dockAlign });
+      await updateSettings({ dockPinned: [...pinned, button.dataset.pin] });
       render();
     });
   });
@@ -1206,25 +1235,116 @@ async function renderAboutOverview(root) {
 }
 
 function renderShortcuts(root) {
+  const keys = getKeys();
   root.innerHTML = group({
     title: 'Keyboard shortcuts',
-    sub: 'Available while a RadonOS tab is focused',
+    sub: 'Current bindings — change them in the Keyboard category',
     iconName: 'terminal',
     body: `
       <dl class="kv-table">
-        <dt>Start menu</dt><dd><span class="ros-kbd">Alt</span> + <span class="ros-kbd">Space</span></dd>
-        <dt>Close window</dt><dd><span class="ros-kbd">Alt</span> + <span class="ros-kbd">W</span></dd>
-        <dt>Minimize window</dt><dd><span class="ros-kbd">Alt</span> + <span class="ros-kbd">M</span></dd>
-        <dt>Cycle windows</dt><dd><span class="ros-kbd">Alt</span> + <span class="ros-kbd">Tab</span></dd>
+        ${SHORTCUT_ACTIONS.map((action) => `<dt>${escapeHtml(action.label)}</dt><dd><span class="ros-kbd">${escapeHtml(describe(keys[action.id]) || 'Unbound')}</span></dd>`).join('')}
         <dt>Maximize / restore</dt><dd>Double-click a window title bar</dd>
         <dt>Snap window</dt><dd>Drag a title bar to the left, right or top edge</dd>
-        <dt>Save in Notepad</dt><dd><span class="ros-kbd">Ctrl</span> + <span class="ros-kbd">S</span></dd>
-        <dt>Terminal clear</dt><dd><span class="ros-kbd">Ctrl</span> + <span class="ros-kbd">L</span></dd>
-        <dt>Copy URL in Browser</dt><dd><span class="ros-kbd">Ctrl</span> + <span class="ros-kbd">L</span></dd>
+        <dt>Notepad save</dt><dd><span class="ros-kbd">Ctrl</span>+<span class="ros-kbd">S</span> (inside Notepad)</dd>
       </dl>`,
   });
 
   paintIcons(root);
+}
+
+/* -------------------------------------------------------------- keyboard */
+let keyListener = null;
+
+function renderKeyboardShortcuts(root) {
+  const keys = getKeys();
+  let capturing = null;
+
+  const chipLabel = (action) => {
+    if (action.id === 'layout.quadrant') return `${describe(keys[action.id])}+1…4`;
+    if (action.id === 'browser.tab') return `${describe(keys[action.id])}+1…9`;
+    return keys[action.id] ? describe(keys[action.id]) : 'Unbound';
+  };
+
+  root.innerHTML = `
+    <div class="setting-hint" style="margin:2px 2px 12px">
+      Click a binding and press the combination you want. Use <kbd>Backspace</kbd> to unbind and <kbd>Esc</kbd> to cancel.
+      Defaults are <kbd>Alt</kbd>+<kbd>Shift</kbd> chords on purpose: browsers and the operating system claim the
+      Ctrl, Alt and Windows chords first, so those never reach RadonOS.
+    </div>
+    ${SHORTCUT_GROUPS.map((groupMeta) => group({
+    title: groupMeta.label,
+    sub: groupMeta.note,
+    iconName: 'terminal',
+    body: SHORTCUT_ACTIONS.filter((action) => action.group === groupMeta.id).map((action) => row({
+      label: action.label,
+      hint: keys[action.id] ? '' : 'No shortcut bound',
+      control: `
+          <button class="ros-btn sm key-chip" data-key-action="${action.id}">${escapeHtml(chipLabel(action))}</button>
+          <button class="ros-btn sm icon ghost" data-key-reset="${action.id}" data-icon="rotate-ccw" data-size="13" title="Reset to default"></button>`,
+    })).join(''),
+  })).join('')}
+    <div style="display:flex;justify-content:flex-end;margin-top:12px">
+      <button class="ros-btn sm" id="keys-reset-all">Reset every shortcut</button>
+    </div>`;
+
+  paintIcons(root);
+
+  root.querySelectorAll('[data-key-action]').forEach((button) => {
+    button.addEventListener('click', () => {
+      root.querySelector('.key-chip.capturing')?.classList.remove('capturing');
+      capturing = button;
+      button.classList.add('capturing');
+      button.textContent = 'Press keys…';
+      button.focus();
+    });
+  });
+
+  root.querySelectorAll('[data-key-reset]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      await resetKey(button.dataset.keyReset);
+      render();
+    });
+  });
+
+  $('#keys-reset-all')?.addEventListener('click', async () => {
+    await resetKeys();
+    toast('Shortcuts reset to defaults', { type: 'success', iconName: 'rotate-ccw' });
+    render();
+  });
+
+  if (keyListener) root.removeEventListener('keydown', keyListener, true);
+  keyListener = async (event) => {
+    if (!capturing) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const actionId = capturing.dataset.keyAction;
+
+    if (event.key === 'Escape') {
+      capturing.classList.remove('capturing');
+      capturing = null;
+      render();
+      return;
+    }
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      await resetKey(actionId);
+      capturing = null;
+      render();
+      return;
+    }
+    const combo = comboFromEvent(event);
+    if (!combo) return;
+    if (!/(Ctrl|Alt|Shift|Meta)\+/.test(combo)) {
+      toast('Add Ctrl, Alt, Shift or Cmd — a bare key would fire while typing', { type: 'error' });
+      return;
+    }
+    const conflict = conflictingAction(actionId, combo);
+    await setKey(actionId, combo);
+    capturing = null;
+    render();
+    if (conflict) toast(`${describe(combo)} was already used by “${conflict.label}”`, { type: 'error', title: 'Also bound' });
+    else toast(`Bound to ${describe(combo)}`, { type: 'success', iconName: 'check-circle' });
+  };
+  root.addEventListener('keydown', keyListener, true);
 }
 
 /* ---------------------------------------------------------------- render */

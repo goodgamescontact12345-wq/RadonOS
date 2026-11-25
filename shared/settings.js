@@ -37,7 +37,17 @@ export const DEFAULT_SETTINGS = {
   iconLabels: true,
   iconSize: 84,
   iconOrder: ['explorer', 'notepad', 'terminal', 'browser', 'media', 'settings'],
-  shortcuts: [],
+  shortcuts: [], // desktop shortcut entries (name + url)
+  dockPinned: [
+    'explorer', 'browser', 'terminal', 'notepad', 'media',
+    'calculator', 'calendar', 'notes', 'clock', 'monitor', 'help', 'settings',
+  ],
+  hiddenIcons: [], // desktop app icons the user removed
+  desktopNotes: [], // sticky notes pinned on the desktop
+  keys: {}, // shortcut overrides, see shared/shortcuts.js
+  notes: [], // Notes app entries
+  calendarNotes: {}, // YYYY-MM-DD → text
+  clockCities: [], // Clock app world clocks
   clock24: true,
   showSeconds: false,
   bootAnimation: false,

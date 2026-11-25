@@ -1,0 +1,95 @@
+/* Shared chrome for the small utility apps (Calculator, Clock, Calendar,
+   Notes, System Monitor, Help). Each app keeps its own behaviour in app.js;
+   this file only holds layout they would otherwise repeat. */
+
+.app-shell { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+.pane { padding: 14px 16px; overflow: auto; }
+.pane-split { display: grid; grid-template-columns: 220px 1fr; height: 100%; min-height: 0; }
+.pane-side { border-right: 1px solid var(--border); overflow: auto; padding: 8px; display: grid; gap: 2px; align-content: start; }
+.pane-main { overflow: auto; padding: 14px 16px; }
+.empty-hint { color: var(--text-faint); font-size: 12.5px; line-height: 1.6; max-width: 46ch; }
+.big-readout { font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.muted { color: var(--text-dim); }
+
+/* ---------------------------------------------------------- calculator */
+.calc-shell { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+.calc-screen {
+  display: grid; justify-items: end; gap: 4px;
+  padding: 18px 20px 12px; border-bottom: 1px solid var(--border);
+}
+.calc-expr { font-size: 12px; color: var(--text-faint); min-height: 16px; font-variant-numeric: tabular-nums; }
+.calc-out { font-size: 34px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.calc-pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 12px; }
+.calc-key {
+  height: 46px; border-radius: 9px; border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 62%, transparent);
+  color: var(--text); font: inherit; font-size: 15px; cursor: pointer;
+  transition: background .12s, border-color .12s, transform .1s;
+}
+.calc-key:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.calc-key:active { transform: scale(.97); }
+.calc-key.op { color: color-mix(in srgb, var(--accent) 78%, white); }
+.calc-key.eq { background: color-mix(in srgb, var(--accent) 26%, transparent); border-color: color-mix(in srgb, var(--accent) 48%, transparent); }
+.calc-key.wide { grid-column: span 2; }
+
+/* --------------------------------------------------------------- clock */
+.clock-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.clock-card {
+  border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  background: color-mix(in srgb, var(--surface) 54%, transparent);
+}
+.clock-city { font-size: 11.5px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .08em; }
+.clock-time-big { font-size: 24px; font-weight: 340; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.clock-zone { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.stopwatch { display: grid; gap: 10px; justify-items: center; padding: 18px 0 6px; }
+.stopwatch-time { font-size: 42px; font-weight: 250; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+.stopwatch-actions { display: flex; gap: 8px; }
+
+/* ------------------------------------------------------------ calendar */
+.cal-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.cal-month { font-size: 14px; font-weight: 600; min-width: 150px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 12px 14px; }
+.cal-dow { text-align: center; font-size: 10.5px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; padding-bottom: 4px; }
+.cal-day {
+  aspect-ratio: 1 / 1; display: grid; place-items: center; border-radius: 8px;
+  border: 1px solid transparent; background: transparent; color: var(--text-dim);
+  font: inherit; font-size: 12.5px; cursor: pointer; position: relative;
+}
+.cal-day:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.cal-day.out { opacity: .35; }
+.cal-day.today { border-color: color-mix(in srgb, var(--accent) 60%, transparent); color: var(--text); font-weight: 600; }
+.cal-day.selected { background: color-mix(in srgb, var(--accent) 26%, transparent); color: var(--text); }
+.cal-day.has-note::after {
+  content: ''; position: absolute; bottom: 5px; width: 4px; height: 4px;
+  border-radius: 50%; background: var(--accent);
+}
+.cal-note { display: grid; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--border); }
+
+/* --------------------------------------------------------------- notes */
+.note-item {
+  text-align: left; border: 1px solid transparent; border-radius: 8px;
+  background: transparent; color: var(--text); font: inherit; padding: 8px 10px;
+  cursor: pointer; display: grid; gap: 2px; width: 100%;
+}
+.note-item:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.note-item.active { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.note-item strong { font-size: 12.5px; font-weight: 560; }
+.note-item small { font-size: 11px; color: var(--text-faint); }
+.note-editor { display: grid; grid-template-rows: auto 1fr; gap: 10px; height: 100%; min-height: 0; }
+.note-editor .editor { min-height: 0; }
+
+/* ------------------------------------------------------------- monitor */
+.mon-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 14px; }
+.stat-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: color-mix(in srgb, var(--surface) 50%, transparent); }
+.stat-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .07em; }
+.stat-value { font-size: 20px; font-weight: 400; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.proc-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.proc-row img, .proc-row svg { flex: none; }
+.proc-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- help */
+.help-entry { border-bottom: 1px solid var(--border); padding: 10px 0; }
+.help-entry h4 { margin: 0 0 3px; font-size: 13px; font-weight: 560; }
+.help-entry p { margin: 0; font-size: 12.5px; color: var(--text-dim); line-height: 1.55; }
+.help-keys { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.help-keys code { font-family: var(--mono); font-size: 11.5px; color: var(--text); }

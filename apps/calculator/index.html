@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calculator</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="../kit.css">
+</head>
+<body class="app calc-shell">
+  <div class="calc-screen">
+    <div class="calc-expr" id="calc-expr"></div>
+    <div class="calc-out" id="calc-out">0</div>
+  </div>
+
+  <div class="calc-pad" id="calc-pad">
+    <button class="calc-key" data-key="clear">AC</button>
+    <button class="calc-key" data-key="(">(</button>
+    <button class="calc-key" data-key=")">)</button>
+    <button class="calc-key op" data-key="/">÷</button>
+    <button class="calc-key" data-key="7">7</button>
+    <button class="calc-key" data-key="8">8</button>
+    <button class="calc-key" data-key="9">9</button>
+    <button class="calc-key op" data-key="*">×</button>
+    <button class="calc-key" data-key="4">4</button>
+    <button class="calc-key" data-key="5">5</button>
+    <button class="calc-key" data-key="6">6</button>
+    <button class="calc-key op" data-key="-">−</button>
+    <button class="calc-key" data-key="1">1</button>
+    <button class="calc-key" data-key="2">2</button>
+    <button class="calc-key" data-key="3">3</button>
+    <button class="calc-key op" data-key="+">+</button>
+    <button class="calc-key" data-key="0">0</button>
+    <button class="calc-key" data-key=".">.</button>
+    <button class="calc-key" data-key="back">⌫</button>
+    <button class="calc-key eq" data-key="=">=</button>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

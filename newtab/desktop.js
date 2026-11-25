@@ -14,6 +14,7 @@ const shortcutKey = (id) => `shortcut:${id}`;
 
 export function createDesktop({ wm }) {
   const surface = document.getElementById('icon-surface');
+  const noteSurface = document.getElementById('note-surface');
   const desktop = document.getElementById('desktop');
   const marquee = document.getElementById('marquee');
   const iconNodes = new Map();
@@ -50,8 +51,9 @@ export function createDesktop({ wm }) {
         order.push(key);
       }
     }
+    const hidden = new Set(getSettings().hiddenIcons || []);
     return order.filter((key) => {
-      if (key.startsWith('app:')) return !!getApp(key.slice(4));
+      if (key.startsWith('app:')) return !!getApp(key.slice(4)) && !hidden.has(key.slice(4));
       return (getSettings().shortcuts || []).some((sc) => key === shortcutKey(sc.id));
     });
   }
@@ -128,6 +130,7 @@ export function createDesktop({ wm }) {
     }
 
     surface.appendChild(fragment);
+    renderNotes();
     lastFingerprint = fingerprint();
     layout();
     applyLabelVisibility(settings);
@@ -138,6 +141,7 @@ export function createDesktop({ wm }) {
     return JSON.stringify([
       settings.iconOrder,
       settings.shortcuts,
+      settings.hiddenIcons,
       settings.iconSize,
       settings.iconLabels,
     ]);
@@ -289,9 +293,16 @@ export function createDesktop({ wm }) {
       });
     } else {
       items.push({
-        label: 'App settings',
-        iconName: 'settings',
-        action: () => wm.open('settings', { args: { section: 'about' } }),
+        label: 'Remove from desktop',
+        iconName: 'trash',
+        danger: true,
+        action: async () => {
+          const hiddenIcons = [...new Set([...(getSettings().hiddenIcons || []), entry.appId])];
+          await updateSettings({ hiddenIcons });
+          selected.delete(entry.key);
+          render();
+          toast(`${entry.name} removed — Settings → Desktop restores it`, { iconName: 'info' });
+        },
       });
     }
 
@@ -367,12 +378,117 @@ export function createDesktop({ wm }) {
     toast('Desktop refreshed', { iconName: 'refresh' });
   }
 
+  /* ---------------------------------------------------------- desktop notes */
+  /** Sticky notes pinned on the wallpaper, with their own positions. */
+  function renderNotes() {
+    if (!noteSurface) return;
+    const notes = Array.isArray(getSettings().desktopNotes) ? getSettings().desktopNotes : [];
+    noteSurface.innerHTML = '';
+    for (const note of notes) {
+      const node = document.createElement('article');
+      node.className = 'desktop-note';
+      node.dataset.noteId = note.id;
+      node.style.left = `${note.x ?? 240}px`;
+      node.style.top = `${note.y ?? 120}px`;
+      node.innerHTML = `
+        <header class="note-head">
+          <span class="note-grip" title="Drag to move"></span>
+          <button type="button" class="note-close" data-note-delete title="Remove note">×</button>
+        </header>
+        <div class="note-text" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true">${escapeHtml(note.text || '')}</div>`;
+
+      const text = node.querySelector('.note-text');
+      let timer = 0;
+      text.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => saveNoteText(note.id, text.innerText), 500);
+      });
+      text.addEventListener('blur', () => saveNoteText(note.id, text.innerText));
+      text.addEventListener('pointerdown', (event) => event.stopPropagation());
+
+      node.querySelector('[data-note-delete]').addEventListener('click', (event) => {
+        event.stopPropagation();
+        removeNote(note.id);
+      });
+
+      const head = node.querySelector('.note-head');
+      head.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        event.stopPropagation();
+        const rect = noteSurface.getBoundingClientRect();
+        const grabX = event.clientX - (rect.left + node.offsetLeft);
+        const grabY = event.clientY - (rect.top + node.offsetTop);
+        node.classList.add('dragging');
+
+        const onMove = (moveEvent) => {
+          const x = Math.max(0, Math.min(rect.width - 60, moveEvent.clientX - rect.left - grabX));
+          const y = Math.max(0, Math.min(rect.height - 40, moveEvent.clientY - rect.top - grabY));
+          node.style.left = `${x}px`;
+          node.style.top = `${y}px`;
+        };
+        const onUp = () => {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          node.classList.remove('dragging');
+          void moveNote(note.id, node.offsetLeft, node.offsetTop);
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+
+      noteSurface.appendChild(node);
+    }
+  }
+
+  async function addNote() {
+    const notes = Array.isArray(getSettings().desktopNotes) ? getSettings().desktopNotes : [];
+    const rect = desktop.getBoundingClientRect();
+    const note = {
+      id: crypto.randomUUID(),
+      text: '',
+      x: Math.round(Math.max(120, rect.width * 0.42) + (notes.length % 4) * 24),
+      y: Math.round(Math.max(90, rect.height * 0.24) + (notes.length % 4) * 22),
+      color: 'amber',
+    };
+    await updateSettings({ desktopNotes: [...notes, note] });
+    renderNotes();
+    const node = noteSurface.querySelector(`[data-note-id="${note.id}"] .note-text`);
+    node?.focus();
+  }
+
+  async function saveNoteText(id, text) {
+    const notes = (getSettings().desktopNotes || []).map((note) => (
+      note.id === id ? { ...note, text } : note
+    ));
+    await updateSettings({ desktopNotes: notes });
+  }
+
+  async function moveNote(id, x, y) {
+    const notes = (getSettings().desktopNotes || []).map((note) => (
+      note.id === id ? { ...note, x, y } : note
+    ));
+    await updateSettings({ desktopNotes: notes });
+  }
+
+  async function removeNote(id) {
+    const notes = (getSettings().desktopNotes || []).filter((note) => note.id !== id);
+    await updateSettings({ desktopNotes: notes });
+    renderNotes();
+  }
+
+  async function restoreIcons() {
+    await updateSettings({ hiddenIcons: [] });
+    render();
+    toast('App icons restored', { type: 'success', iconName: 'grid' });
+  }
+
   /* --------------------------------------------------------- desktop menu */
   function showDesktopMenu(x, y) {
     showContextMenu([
       { label: 'Refresh', iconName: 'refresh', action: refresh },
       { label: 'New shortcut', iconName: 'plus', action: addShortcut },
-      { label: 'New note', iconName: 'file-plus', action: () => wm.open('notepad') },
+      { label: 'New note', iconName: 'sticky', action: () => addNote() },
+      ...(getSettings().hiddenIcons?.length ? [{ label: 'Restore app icons', iconName: 'rotate-ccw', action: restoreIcons }] : []),
       { separator: true },
       {
         label: 'Change background',
@@ -514,6 +630,8 @@ export function createDesktop({ wm }) {
     render,
     sortIcons,
     addShortcut,
+    addNote,
+    restoreIcons,
     openApp,
     openEntry,
     clearSelection,

@@ -49,6 +49,9 @@ desktop, published as a static app on GitHub Pages (see [Hosted version](#hosted
 | **radonpkg** | A real (offline) package manager: `radonpkg search|install|remove|list|info` installs six CLI tools (`json`, `base64`, `uuid`, `hash`, `sysmon`, `tidy`), writes a manifest to `/System/Packages`, and retires the command again on removal. |
 | **Browser** | Tabs, each with its own frame and history, so switching never reloads a page and `Alt`+`T` / `Alt`+`W` add and close them; address bar with search fallback, per-tab back/forward, quick-link home screen, bookmark saving, and real embedding for frame-blocking sites: in the extension a `declarativeNetRequest` rule drops `X-Frame-Options` / CSP `frame-ancestors` from frames RadonOS itself opened (`shared/framePolicy.js`), so Google, YouTube or GitHub load in the window; where those headers cannot be stripped, a **linked browser window** takes over at the RadonOS window's size and position, the RadonOS window steps out of the desktop while that page is elsewhere and comes back when the site window closes (`shared/embedWindow.js`). |
 | **Media** | Playlist from `/Music` and `/Videos`, audio player with a canvas visualiser (Web Audio analyser, synthesised fallback for CORS-restricted streams), video element, stream URLs, YouTube embeds, shuffle/repeat/volume/seek. Repeat cycles off → playlist → this song, and the button switches to a `1` glyph (`repeat-one`) while it loops one track. |
+| **Shell** | Reads as a Linux desktop: a 30px top panel (Applications button, search, tray, clock), a dock down the left edge with pin/unpin and running-window indicators, flat Adwaita-style headerbars with monochrome controls, flat desktop icon glyphs, and draggable sticky notes that live on the wallpaper. Window layer and menus inset themselves around the panel and dock. |
+| **Apps** | Twelve apps in total: Files, Browser, Terminal, Notepad, Media and Settings plus **Calculator** (own expression parser, CSP-safe), **Clock** (world clocks + stopwatch), **Calendar** (a note per day), **Notes** (pin any note to the desktop), **System Monitor** (windows, heap, storage) and **Help** (live shortcut list, apps, tips). |
+| **Desktop editing** | Right-click the wallpaper for New shortcut, New note, Sort icons and Restore app icons; icons drag to reorder, a right-click on an app icon removes it from the desktop, and sticky notes drag, edit in place and delete on their own. |
 | **Settings** | Five categories that drill into subcategory pages with a breadcrumb and circular back button. Appearance (theme dark/light/auto, 8 accents + custom colour, 4 palettes, liquid-glass blur/saturation/brightness, wallpaper presets/URL/upload, dim/blur, lock screen clock/session details/dimming/start lock and an optional password), Desktop (widgets, weather city + units, icon labels, layout reset, dock position + app-strip alignment, boot animation, reduced motion), System (user name, clock format, badge clock, sounds and volume, lock/restart), Storage (usage bars, JSON export/import, trash cleanup, reset, full erase) and About (runtime stats, shortcuts, features). |
 
 Everything is themed through CSS custom properties, so light/dark, palette, glass and accent changes apply
@@ -222,7 +225,9 @@ radonos/
 │   ├── windowManager.js     Window lifecycle: open/close/minimise/maximise/drag/resize/snap/z-order/persist
 │   ├── desktop.js           Icon grid, drag + auto-snap, marquee select, context menus, file drop
 │   ├── taskbar.js           Running apps, start menu + search, tray popovers, notifications, about, lock
-│   ├── commandBar.js        Super+Space spotlight: fuzzy search, ranking, keyboard-first execution
+│   ├── commandBar.js        Alt+Shift+K spotlight: fuzzy search, ranking, keyboard-first execution
+│   ├── dock.js              Left-edge dock: pinned apps, running windows, pin/unpin menus
+│   ├── keys.js              Shell shortcut dispatch: one handler for desktop and app-window keys
 │   ├── controlCenter.js     Quick settings: display, sound, appearance, dock, behaviour
 │   └── widgets.js           Weather, sticky note, bookmarks, performance monitor
 ├── apps/                    One folder per app window (html + css + app.js, loaded in an iframe)
@@ -348,26 +353,35 @@ check those.
 
 | Shortcut | Action |
 | --- | --- |
-| `Super` + `Space` | Open the command bar (spotlight) |
-| `Ctrl` / `Cmd` + `K` | Same command bar (works where the OS owns `Win`+`Space`) |
+Every shell shortcut is an `Alt`+`Shift` chord. Browsers and operating systems claim the
+`Ctrl`, `Alt` and `Windows` combinations before a page sees them, so those never arrive; `Alt`+`Shift`
+reaches the page everywhere and collides with nothing. All of them are rebindable in
+**Settings → Keyboard**, which writes `settings.keys` (`shared/shortcuts.js`).
+
+| Shortcut | Action |
+| --- | --- |
+| `Alt` + `Shift` + `Space` | Applications menu |
+| `Alt` + `Shift` + `K` | Command bar (spotlight) |
 | `>` on the desktop | Open the command bar, shell-style |
 | `↑` `↓` / `Tab` / `↵` / `Esc` | Move, cycle, run, close in the command bar |
-| `Alt` + `Space` | Open the start menu / search |
-| `Alt` + `W` | Close the focused window |
-| `Alt` + `M` | Minimise the focused window |
-| `Alt` + `Tab` / `Alt` + `` ` `` | Cycle open windows (`Alt`+`Tab` belongs to Windows and macOS, so `Alt`+`` ` `` is the one that always arrives) |
+| `Alt` + `Shift` + `Q` | Close the focused window |
+| `Alt` + `Shift` + `M` | Minimise the focused window |
+| `Alt` + `Shift` + `` ` `` | Cycle open windows |
 | `Alt` + `Shift` + `←` / `→` | Tile the focused window to the left / right half |
 | `Alt` + `Shift` + `1`–`4` | Tile to a quadrant (top-left → bottom-right) |
 | `Alt` + `Shift` + `5` | Centre the focused window |
-| `Alt` + `Shift` + `T` | Cycle through tiling layouts |
-| `Alt` + `Shift` + `↑` / `↓` | Maximise / restore the focused window |
+| `Alt` + `Shift` + `Y` | Cycle through tiling layouts |
+| `Alt` + `Shift` + `↑` | Maximise / restore the focused window |
+| `Alt` + `Shift` + `E` / `Enter` | Open Files / Terminal |
+| `Alt` + `Shift` + `S` / `L` | Open Settings / lock the session |
+| `Alt` + `Shift` + `T` / `W` | Browser: new tab / close tab |
+| `Alt` + `Shift` + `1`–`9` | Browser: switch tab |
+| `Alt` + `Shift` + `A` / `R` | Browser: address bar / reload |
+| `Alt` + `Shift` + `←` / `→` | Browser: back / forward |
 | Double-click title bar | Maximise / restore |
 | Drag to screen edge | Snap left/right, drag to top to maximise |
-| `Ctrl` + `S` / `Ctrl` + `O` / `Ctrl` + `N` | Notepad save / open / new |
-| `Ctrl` + `L` / `Ctrl` + `C` | Terminal clear / cancel line |
-| `Alt` + `T` / `Alt` + `W` / `Alt` + `1`–`9` | Browser: new tab / close tab / switch tab |
-| `Alt` + `A` / `Alt` + `R` / `Ctrl` + `Alt` + `←` / `→` | Browser: address bar / reload / back / forward |
-| `Ctrl` + `L` / `Ctrl` + `D` / `Ctrl` + `T` / `Ctrl` + `W` | Browser: the same actions for hosts that do deliver these chords (Electron, some PWA shells, the dev harness) |
+| `Ctrl` + `S` / `Ctrl` + `O` / `Ctrl` + `N` | Notepad save / open / new (local to the app) |
+| `Ctrl` + `L` / `Ctrl` + `C` | Terminal clear / cancel line (local to the app) |
 | `Tab` | Terminal path + command completion |
 | `Delete` | Move the selected Files items to trash |
 | `Alt` + `Shift` + `R` | Open RadonOS (extension command) |

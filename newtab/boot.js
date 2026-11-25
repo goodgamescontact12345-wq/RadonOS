@@ -6,6 +6,8 @@ import { createDesktop } from './desktop.js';
 import { createTaskbar } from './taskbar.js';
 import { createWidgets } from './widgets.js';
 import { createCommandBar } from './commandBar.js';
+import { createDock } from './dock.js';
+import { createShellKeys } from './keys.js';
 import { createControlCenter } from './controlCenter.js';
 import { icon } from '../shared/icons.js';
 import * as FS from '../shared/fs.js';
@@ -30,6 +32,12 @@ async function boot() {
   // they read the same settings store and open the same window manager.
   const controlCenter = createControlCenter({ wm });
   const commandBar = createCommandBar({ wm, taskbar, desktop, controlCenter });
+  const dock = createDock({ wm });
+
+  // One dispatcher for desktop keys and app-window keys alike.
+  const shellKeys = createShellKeys({ wm, taskbar, commandBar, controlCenter });
+  wm.keyHandler = (event) => shellKeys.handle(event);
+  document.addEventListener('keydown', (event) => shellKeys.handle(event), true);
 
   window.RadonOS = {
     version: '1.0.0',
@@ -40,6 +48,8 @@ async function boot() {
     widgets,
     controlCenter,
     commandBar,
+    dock,
+    shortcuts: shellKeys,
     fs: FS,
     settings: getSettings(),
     openApp: (appId, args = {}) => wm.open(appId, { args }),

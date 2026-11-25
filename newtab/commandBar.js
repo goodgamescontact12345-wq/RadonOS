@@ -545,21 +545,8 @@ export function createCommandBar({ wm, taskbar, desktop, controlCenter }) {
     if (event.target === backdrop) close();
   });
 
-  document.addEventListener('keydown', (event) => {
-    const locked = !document.querySelector('#lock-screen')?.hidden;
-    if (locked) return;
-    const withModifier = event.metaKey || event.ctrlKey;
-    // Super+Space is the documented shortcut; Ctrl/Cmd+K is the portable one
-    // (Windows reserves Win+Space for the input-language switcher).
-    const spotlight = (event.metaKey && event.code === 'Space' && !event.ctrlKey && !event.altKey)
-      || (withModifier && event.code === 'KeyK' && !event.shiftKey && !event.altKey);
-    if (!spotlight) return;
-    // Never steal the shortcut from a text field in an app iframe.
-    if (isOpen() || !event.target.closest?.('input, textarea, [contenteditable="true"]')) {
-      event.preventDefault();
-      toggle();
-    }
-  });
+  // The command-bar chord is a normal, rebindable shortcut now: it lives in
+  // shared/shortcuts.js and newtab/keys.js dispatches it.
 
   // `>` typed on the desktop opens the palette, like a shell prompt.
   document.addEventListener('keydown', (event) => {

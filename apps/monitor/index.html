@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>System Monitor</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="../kit.css">
+</head>
+<body class="app app-shell">
+  <div class="app-toolbar">
+    <span class="app-title">System Monitor</span>
+    <div class="tb-sep"></div>
+    <button class="ros-btn sm ghost" id="monitor-refresh"><span data-icon="refresh" data-size="14"></span> Refresh</button>
+    <span class="ros-spacer"></span>
+    <input class="ros-input" id="monitor-filter" placeholder="Filter windows…" style="width:180px;height:30px">
+  </div>
+
+  <div class="app-body pane">
+    <div class="mon-grid" id="mon-stats"></div>
+    <div class="section-label">Open windows</div>
+    <div id="mon-procs"></div>
+  </div>
+
+  <div class="app-status">
+    <span id="mon-status">Live</span>
+    <span class="ros-spacer"></span>
+    <span id="mon-engine"></span>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

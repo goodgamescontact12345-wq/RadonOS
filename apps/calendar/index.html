@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calendar</title>
+  <link rel="icon" href="../../icons/icon-32.png">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="../../shared/app.css">
+  <link rel="stylesheet" href="../kit.css">
+</head>
+<body class="app app-shell">
+  <div class="cal-head">
+    <button class="ros-btn sm icon ghost" id="prev" data-icon="chevron-left" data-size="16" title="Previous month"></button>
+    <div class="cal-month" id="month-label">—</div>
+    <button class="ros-btn sm icon ghost" id="next" data-icon="chevron-right" data-size="16" title="Next month"></button>
+    <button class="ros-btn sm ghost" id="today">Today</button>
+    <span class="ros-spacer"></span>
+    <span class="muted" id="cal-count"></span>
+  </div>
+
+  <div class="app-body" style="overflow:auto">
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-note">
+      <div class="section-label" id="note-label">Pick a day to add a note</div>
+      <textarea class="ros-textarea" id="day-note" rows="3" placeholder="What happens that day?" disabled></textarea>
+    </div>
+  </div>
+
+  <div class="app-status">
+    <span>Notes are stored with your RadonOS settings</span>
+    <span class="ros-spacer"></span>
+    <span id="cal-status"></span>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

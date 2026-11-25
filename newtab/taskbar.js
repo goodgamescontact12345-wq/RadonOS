@@ -2,6 +2,7 @@ import { APPS, OS_VERSION, OS_CODENAME } from '../shared/registry.js';
 import { icon, radonMark } from '../shared/icons.js';
 import { getSettings, updateSettings, onSettingsChange } from '../shared/settings.js';
 import { hasPassword, lockSettings, verifyPassword } from '../shared/lock.js';
+import { comboFor } from '../shared/shortcuts.js';
 import { showContextMenu, showModal, toast, escapeHtml, formatBytes, relativeTime, clamp } from '../shared/ui.js';
 import { setVolume, playChime, playClick } from '../shared/audio.js';
 import { tabs, isExtension } from '../shared/platform.js';
@@ -961,12 +962,29 @@ export function createTaskbar({ wm, desktop, widgets }) {
   paintUser();
   setVolume(getSettings().volume ?? 0.45);
 
+  /** Panel hints follow the bindings in Settings → Keyboard. */
+  function paintShortcutHints() {
+    for (const node of document.querySelectorAll('[data-hint]')) {
+      node.textContent = comboFor(node.dataset.hint);
+    }
+    for (const node of document.querySelectorAll('[data-shortcut]')) {
+      const combo = comboFor(node.dataset.shortcut);
+      const base = node.title.replace(/\s*\([^)]*\)$/, '');
+      node.title = combo ? `${base} (${combo})` : base;
+    }
+  }
+  paintShortcutHints();
+
   return {
     notify,
     showAbout,
     lockScreen: lockScreenNow,
     openStartMenu,
     closeStartMenu,
+    toggleStartMenu() {
+      if (startMenu.hidden) openStartMenu();
+      else closeStartMenu();
+    },
     closePopover,
     refresh() {
       syncWindows();

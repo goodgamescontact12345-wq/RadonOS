@@ -26,9 +26,13 @@
   <!-- Desktop -->
   <main class="desktop" id="desktop" aria-label="Desktop">
     <div class="icon-surface" id="icon-surface" role="list" aria-label="Desktop shortcuts"></div>
+    <div class="note-surface" id="note-surface" aria-label="Desktop notes"></div>
     <aside class="widgets" id="widgets" aria-label="Widgets"></aside>
     <div class="marquee" id="marquee" hidden></div>
   </main>
+
+  <!-- Dock: pinned apps and running windows, down the left edge -->
+  <nav class="dock" id="dock" aria-label="Dock"></nav>
 
   <!-- Floating windows live here; the layer stops above the taskbar -->
   <div class="window-layer" id="window-layer"></div>
@@ -67,13 +71,14 @@
   <!-- Taskbar -->
   <footer class="taskbar" id="taskbar" aria-label="Taskbar">
     <div class="tb-section tb-left">
-      <button class="tb-btn start-button" id="start-button" title="Start menu (Alt+Space)" aria-haspopup="true" aria-expanded="false">
-        <span class="start-mark" data-icon="mark" data-size="28"></span>
+      <button class="tb-btn start-button" id="start-button" data-shortcut="system.launcher" title="Applications" aria-haspopup="true" aria-expanded="false">
+        <span class="start-mark" data-icon="mark" data-size="22"></span>
+        <span class="panel-title">Applications</span>
       </button>
       <button class="tb-search" id="taskbar-search" title="Search apps and files">
-        <span data-icon="search" data-size="15"></span>
+        <span data-icon="search" data-size="14"></span>
         <span class="tb-search-label">Search</span>
-        <kbd>Alt+Space</kbd>
+        <kbd data-hint="system.launcher"></kbd>
       </button>
     </div>
 
