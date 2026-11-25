@@ -47,9 +47,9 @@ desktop, published as a static app on GitHub Pages (see [Hosted version](#hosted
 | **Notepad** | Opens and saves into the virtual file system, save-as, download, open-by-search dialog, word wrap and font toggles, live char/word/line counts, `Ctrl+S`/`Ctrl+O`/`Ctrl+N`, "show in Files". |
 | **Terminal** | 27 built-in commands over the *real* file system with quoting, `>` redirection, tab completion, history, `Ctrl+L`/`Ctrl+C`: `ls -l`, `cat`, `mkdir`, `touch`, `rm`, `mv`, `cp`, `open`, `theme`, `wallpaper`, `notify`, `calc`, `df`, `mem`, `uname`, `vfs` (ls/cat/write/rm/du/find/dotfiles), `radonpkg`, `neofetch`, `tabs`, `exit`. Installed packages extend the command table live. |
 | **radonpkg** | A real (offline) package manager: `radonpkg search|install|remove|list|info` installs six CLI tools (`json`, `base64`, `uuid`, `hash`, `sysmon`, `tidy`), writes a manifest to `/System/Packages`, and retires the command again on removal. |
-| **Browser** | Tabs, each with its own frame and history, so switching never reloads a page and `Ctrl`+`T` / `Ctrl`+`W` add and close them; address bar with search fallback, per-tab back/forward, quick-link home screen, bookmark saving, and real embedding for frame-blocking sites: in the extension a `declarativeNetRequest` rule drops `X-Frame-Options` / CSP `frame-ancestors` from frames RadonOS itself opened (`shared/framePolicy.js`), so Google, YouTube or GitHub load in the window; where those headers cannot be stripped, a **linked browser window** takes over at the RadonOS window's size and position, the RadonOS window steps out of the desktop while that page is elsewhere and comes back when the site window closes (`shared/embedWindow.js`). |
+| **Browser** | Tabs, each with its own frame and history, so switching never reloads a page and `Alt`+`T` / `Alt`+`W` add and close them; address bar with search fallback, per-tab back/forward, quick-link home screen, bookmark saving, and real embedding for frame-blocking sites: in the extension a `declarativeNetRequest` rule drops `X-Frame-Options` / CSP `frame-ancestors` from frames RadonOS itself opened (`shared/framePolicy.js`), so Google, YouTube or GitHub load in the window; where those headers cannot be stripped, a **linked browser window** takes over at the RadonOS window's size and position, the RadonOS window steps out of the desktop while that page is elsewhere and comes back when the site window closes (`shared/embedWindow.js`). |
 | **Media** | Playlist from `/Music` and `/Videos`, audio player with a canvas visualiser (Web Audio analyser, synthesised fallback for CORS-restricted streams), video element, stream URLs, YouTube embeds, shuffle/repeat/volume/seek. Repeat cycles off → playlist → this song, and the button switches to a `1` glyph (`repeat-one`) while it loops one track. |
-| **Settings** | Five categories that drill into subcategory pages with a breadcrumb and circular back button. Appearance (theme dark/light/auto, 8 accents + custom colour, 4 palettes, liquid-glass blur/saturation/brightness, wallpaper presets/URL/upload, dim/blur), Desktop (widgets, weather city + units, icon labels, layout reset, dock position + app-strip alignment, boot animation, reduced motion), System (user name, clock format, badge clock, sounds and volume, lock/restart), Storage (usage bars, JSON export/import, trash cleanup, reset, full erase) and About (runtime stats, shortcuts, features). |
+| **Settings** | Five categories that drill into subcategory pages with a breadcrumb and circular back button. Appearance (theme dark/light/auto, 8 accents + custom colour, 4 palettes, liquid-glass blur/saturation/brightness, wallpaper presets/URL/upload, dim/blur, lock screen clock/session details/dimming/start lock and an optional password), Desktop (widgets, weather city + units, icon labels, layout reset, dock position + app-strip alignment, boot animation, reduced motion), System (user name, clock format, badge clock, sounds and volume, lock/restart), Storage (usage bars, JSON export/import, trash cleanup, reset, full erase) and About (runtime stats, shortcuts, features). |
 
 Everything is themed through CSS custom properties, so light/dark, palette, glass and accent changes apply
 instantly to every open window through a `chrome.storage` subscription. The visual language is a deep
@@ -244,6 +244,7 @@ radonos/
 │   ├── embedWindow.js       Linked browser windows for frame-blocked pages: opens at the
 │   │                        owning window's bounds, hides that window while the page is
 │   │                        elsewhere, and follows every resize and move
+│   ├── lock.js              Lock-screen settings plus the salted PBKDF2 password hash and check
 │   ├── audio.js             Synthesised OS sounds behind a master volume
 │   ├── base.css / app.css   Design tokens + shared app chrome (toolbar, sidebar, lists, editor, terminal)
 │   └── ...
@@ -399,6 +400,10 @@ event as used so the desktop leaves it alone.
   session restore is what brings the session back. The browser app therefore mirrors every action on
   an `Alt` chord that browsers do deliver, and `Alt`+`` ` `` exists for window cycling besides the
   system-owned `Alt`+`Tab`.
+- The lock-screen password is a convenience lock, not encryption: it is stored as a salted
+  PBKDF2-SHA256 hash in the profile, and it gates the lock screen, but the files behind it stay
+  readable to anyone with devtools. Forgetting it means resetting settings from Storage → Cleanup
+  (which also clears the password).
 - The virtual file system is per browser profile and is not synced anywhere. Export/import in
   Settings → Storage covers settings, folders and text files (binaries stay local).
 - `performance.memory` is Chromium-only (and may report coarse values); the widgets degrade gracefully.

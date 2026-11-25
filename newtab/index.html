@@ -171,7 +171,15 @@
           <span data-icon="lock" data-size="14"></span>Unlock
         </button>
       </div>
-      <div class="lock-hint"><kbd>Enter</kbd> or click anywhere to unlock</div>
+      <form class="lock-pass" id="lock-pass" hidden>
+        <input class="ros-input" id="lock-pass-input" type="password" autocomplete="current-password"
+          placeholder="Password" aria-label="Password" aria-describedby="lock-error" spellcheck="false">
+        <button class="lock-unlock" id="lock-pass-submit" type="submit">
+          <span data-icon="lock" data-size="14"></span>Unlock
+        </button>
+      </form>
+      <div class="lock-error" id="lock-error" role="alert" hidden>Wrong password — try again</div>
+      <div class="lock-hint" id="lock-hint"><kbd>Enter</kbd> or click anywhere to unlock</div>
     </div>
   </div>
 

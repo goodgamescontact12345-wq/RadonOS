@@ -851,6 +851,7 @@ body.dragging-window { cursor: grabbing; }
 
 /* --------------------------------------------------------------- lock */
 .lock-screen {
+  --lock-dim: .3;
   position: fixed;
   inset: 0;
   z-index: 1500;
@@ -858,10 +859,26 @@ body.dragging-window { cursor: grabbing; }
   place-items: center;
   background:
     radial-gradient(900px 620px at 50% 24%, rgba(var(--accent-rgb), .18), transparent 62%),
-    linear-gradient(165deg, rgba(6, 22, 32, .78), rgba(4, 13, 24, .93));
+    linear-gradient(165deg, rgba(6, 22, 32, .34), rgba(4, 13, 24, .5));
   backdrop-filter: blur(calc(var(--glass-blur) + 5px)) saturate(var(--glass-sat));
   animation: ros-fade .28s ease-out;
   transition: opacity .21s var(--ease), transform .21s var(--ease);
+}
+/* Settings → Appearance → Lock screen controls how much desktop shows through. */
+.lock-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(3, 10, 18, var(--lock-dim));
+}
+[data-theme="light"] .lock-screen::before { background: rgba(238, 244, 252, var(--lock-dim)); }
+.lock-screen.shake { animation: lock-shake .32s var(--ease); }
+@keyframes lock-shake {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-7px); }
+  48% { transform: translateX(6px); }
+  74% { transform: translateX(-3px); }
 }
 /* Vignette: keeps the eye on the clock instead of the wallpaper edges. */
 .lock-screen::after {
@@ -920,6 +937,16 @@ body.dragging-window { cursor: grabbing; }
 .lock-unlock:hover { background: color-mix(in srgb, var(--accent) 26%, transparent); border-color: color-mix(in srgb, var(--accent) 62%, transparent); }
 .lock-unlock:active { transform: scale(.97); }
 .lock-unlock:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lock-pass { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.lock-pass[hidden] { display: none; }
+.lock-pass .ros-input { width: 190px; height: 34px; text-align: center; letter-spacing: .06em; }
+.lock-error {
+  margin-top: 10px;
+  font-size: 11.5px;
+  font-weight: 520;
+  color: color-mix(in srgb, var(--danger) 82%, white 8%);
+}
+.lock-error[hidden] { display: none; }
 .lock-hint { margin-top: 22px; display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text-faint); }
 .lock-hint kbd {
   font-family: inherit;

@@ -45,6 +45,14 @@ export const DEFAULT_SETTINGS = {
   badgeClock: false,
   sounds: true,
   volume: 0.45,
+  lock: {
+    hash: '', // salted PBKDF2 hash of the lock-screen password (shared/lock.js)
+    salt: '',
+    showClock: true,
+    showWindows: true,
+    dim: 0.3, // veil over the desktop behind the lock
+    onStart: false,
+  },
   userName: 'Radon User',
   weatherCity: 'Amsterdam',
   weatherUnit: 'c',

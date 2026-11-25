@@ -1,4 +1,5 @@
 import { getSettings, loadSettings, updateSettings, resetSettings } from '../shared/settings.js';
+import { hasPassword, lockSettings } from '../shared/lock.js';
 import { initTheme } from '../shared/theme.js';
 import { WindowManager } from './windowManager.js';
 import { createDesktop } from './desktop.js';
@@ -70,6 +71,9 @@ async function boot() {
   } catch (err) {
     console.warn('[RadonOS] Session restore failed', err);
   }
+
+  // Opt-in: ask for the password before the restored session can be used.
+  if (hasPassword() && lockSettings().onStart) taskbar.lockScreen();
 
   // Deep links from the service worker, context menus and shortcuts.
   const params = new URLSearchParams(window.location.search);

@@ -1,6 +1,7 @@
 import { APPS, OS_VERSION, OS_CODENAME } from '../shared/registry.js';
 import { icon, radonMark } from '../shared/icons.js';
 import { getSettings, updateSettings, onSettingsChange } from '../shared/settings.js';
+import { hasPassword, lockSettings, verifyPassword } from '../shared/lock.js';
 import { showContextMenu, showModal, toast, escapeHtml, formatBytes, relativeTime, clamp } from '../shared/ui.js';
 import { setVolume, playChime, playClick } from '../shared/audio.js';
 import { tabs, isExtension } from '../shared/platform.js';
@@ -458,21 +459,40 @@ export function createTaskbar({ wm, desktop, widgets }) {
 
   /* ------------------------------------------------------------ lock screen */
   function lockScreenNow() {
+    if (locked) return;
     closeStartMenu();
     closePopover();
     locked = true;
     updateClock();
 
+    // Settings → Appearance → Lock screen decides what the lock shows.
+    const lock = lockSettings();
+    const guarded = hasPassword();
+    const passForm = $('#lock-pass');
+    const passInput = $('#lock-pass-input');
+    const passError = $('#lock-error');
+
+    lockScreen.style.setProperty('--lock-dim', String(clamp(lock.dim ?? 0.3, 0, 0.7)));
+    $('#lock-time').hidden = lock.showClock === false;
+    $('#lock-date').hidden = lock.showClock === false;
+
     // What the session looks like from the other side of the lock.
     const openWindows = wm.windows.size;
-    $('#lock-sub').textContent = openWindows
-      ? `${openWindows} window${openWindows === 1 ? '' : 's'} open`
-      : 'Nothing open';
+    $('#lock-sub').textContent = lock.showWindows === false
+      ? (guarded ? 'Locked' : 'Session locked')
+      : openWindows
+        ? `${openWindows} window${openWindows === 1 ? '' : 's'} open`
+        : 'Nothing open';
 
     lockScreen.hidden = false;
-    lockScreen.classList.remove('leaving');
-    // Focus the button, so Enter and Space do the obvious thing.
-    $('#lock-unlock')?.focus({ preventScroll: true });
+    lockScreen.classList.remove('leaving', 'shake');
+    passForm.hidden = !guarded;
+    $('#lock-unlock').hidden = guarded;
+    passError.hidden = true;
+    passInput.value = '';
+    $('#lock-hint').innerHTML = guarded
+      ? '<kbd>Enter</kbd> unlocks with your password'
+      : '<kbd>Enter</kbd> or click anywhere to unlock';
 
     const unlock = () => {
       if (!locked) return;
@@ -489,16 +509,51 @@ export function createTaskbar({ wm, desktop, widgets }) {
       const active = wm.activeId ? wm.windows.get(wm.activeId) : null;
       if (active && !active.minimized) wm.focus(active.id);
     };
-    // Only a deliberate unlock counts: a bare modifier or Tab should not do it.
+
+    const reject = () => {
+      passError.hidden = false;
+      lockScreen.classList.remove('shake');
+      void lockScreen.offsetWidth; // restart the animation
+      lockScreen.classList.add('shake');
+      passInput.select();
+    };
+
+    const attempt = async () => {
+      if (!guarded) return unlock();
+      const typed = passInput.value;
+      if (!typed) return reject();
+      passError.hidden = true;
+      try {
+        if (await verifyPassword(typed)) unlock();
+        else reject();
+      } catch (err) {
+        console.warn('[RadonOS] Password check failed', err);
+        reject();
+      }
+    };
+
+    passForm.onsubmit = (event) => {
+      event.preventDefault();
+      void attempt();
+    };
+    $('#lock-unlock').onclick = () => { void attempt(); };
+
+    // A password makes the lock deliberate: only the form unlocks it.
+    // Without one, any key or click still does, but a bare modifier or Tab not.
     const idleKeys = new Set(['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'OS']);
     const onKeyUnlock = (event) => {
       if (idleKeys.has(event.key)) return;
       unlock();
     };
-    setTimeout(() => {
-      document.addEventListener('pointerdown', unlock);
-      document.addEventListener('keydown', onKeyUnlock);
-    }, 180);
+    if (guarded) {
+      passInput.focus({ preventScroll: true });
+    } else {
+      $('#lock-unlock').focus({ preventScroll: true });
+      setTimeout(() => {
+        document.addEventListener('pointerdown', unlock);
+        document.addEventListener('keydown', onKeyUnlock);
+      }, 180);
+    }
   }
 
   /* ---------------------------------------------------------------- about */

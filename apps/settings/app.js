@@ -2,6 +2,7 @@ import { icon, radonMark } from '../../shared/icons.js';
 import { APPS, OS_VERSION, OS_CODENAME } from '../../shared/registry.js';
 import { getSettings, loadSettings, updateSettings, resetSettings, replaceSettings } from '../../shared/settings.js';
 import { initTheme, applyWallpaper, WALLPAPERS, ACCENTS, PALETTES, DEFAULT_GLASS, GLASS_LIMITS } from '../../shared/theme.js';
+import { hasPassword, lockSettings, setPassword, clearPassword } from '../../shared/lock.js';
 import { idb } from '../../shared/idb.js';
 import * as FS from '../../shared/fs.js';
 import {
@@ -16,9 +17,9 @@ const CATEGORIES = [
   {
     id: 'appearance',
     title: 'Appearance',
-    sub: 'Theme, colour and wallpaper',
+    sub: 'Theme, colour, wallpaper and lock screen',
     icon: 'palette',
-    blurb: 'Make RadonOS look like yours. Theme, accent, palette, glass and wallpaper are shared by every window and menu.',
+    blurb: 'Make RadonOS look like yours. Theme, accent, palette, glass, wallpaper and the lock screen are shared by every window and menu.',
     items: [
       {
         id: 'theme',
@@ -64,6 +65,14 @@ const CATEGORIES = [
         summary: (settings) => (settings.wallpaper.type === 'preset'
           ? WALLPAPERS.find((item) => item.id === settings.wallpaper.value)?.name || 'Preset'
           : settings.wallpaper.type === 'image' ? 'Custom image' : 'Image URL'),
+      },
+      {
+        id: 'lockscreen',
+        title: 'Lock screen',
+        sub: 'Clock, dimming and password',
+        icon: 'lock',
+        render: renderLockScreen,
+        summary: () => (hasPassword() ? 'Password protected' : 'No password'),
       },
     ],
   },
@@ -574,6 +583,109 @@ async function downscale(file, maxWidth) {
   bitmap.close?.();
   return new Promise((resolve) => {
     canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.88);
+  });
+}
+
+function renderLockScreen(root) {
+  const lock = lockSettings();
+  const guarded = hasPassword();
+  const dim = Math.round((lock.dim ?? 0.3) * 100);
+
+  root.innerHTML = `
+    ${group({
+    title: 'Lock screen',
+    sub: 'What the lock shows and how much of the desktop stays visible',
+    iconName: 'lock',
+    body: `
+        ${row({ label: 'Clock', hint: 'Time and date above the unlock card', control: toggle('lock.showClock', lock.showClock !== false) })}}
+        ${row({ label: 'Session details', hint: 'How many windows are waiting behind the lock', control: toggle('lock.showWindows', lock.showWindows !== false) })}
+        ${row({ label: 'Lock when RadonOS opens', hint: 'Ask for the password on every fresh page load', control: toggle('lock.onStart', lock.onStart === true) })}}
+        ${row({
+    label: 'Background dimming',
+    hint: 'How much of the desktop shows through the blur',
+    wide: true,
+    control: `
+            <input type="range" class="ros-range" id="lock-dim" min="0" max="70" value="${dim}" style="--fill:${Math.round((dim / 70) * 100)}%">
+            <span class="vol-value" id="lock-dim-value">${dim}%</span>`,
+  })}
+        ${row({
+    label: 'Preview',
+    hint: 'Lock now to see these settings on the real lock screen',
+    control: '<button class="ros-btn sm" id="lock-preview">Lock screen</button>',
+  })}`,
+  })}
+    ${group({
+    title: 'Password',
+    sub: guarded ? 'Required to leave the lock screen' : 'No password set — one click unlocks',
+    iconName: 'lock',
+    body: `
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-label">${guarded ? 'Change password' : 'Set a password'}</span>
+            <span class="setting-hint">At least 4 characters. Stored as a salted PBKDF2 hash in this profile, never as plain text.</span>
+          </div>
+          <div class="setting-control wide">
+            <input class="ros-input" id="lock-new" type="password" autocomplete="new-password" placeholder="New password" style="width:150px">
+            <input class="ros-input" id="lock-confirm" type="password" autocomplete="new-password" placeholder="Repeat" style="width:120px">
+            <button class="ros-btn sm primary" id="lock-save">${guarded ? 'Change' : 'Set'}</button>
+            ${guarded ? '<button class="ros-btn sm ghost" id="lock-remove">Remove</button>' : ''}
+          </div>
+        </div>
+        <div class="setting-hint">A convenience lock, not disk encryption: everything in this browser profile stays
+        readable in devtools. What it stops is someone walking up to an open session.</div>`,
+  })}`;
+
+  wireToggles(root);
+  paintIcons(root);
+
+  const slider = $('#lock-dim');
+  if (slider) {
+    slider.addEventListener('input', () => {
+      $('#lock-dim-value').textContent = `${slider.value}%`;
+      slider.style.setProperty('--fill', `${(Number(slider.value) / 70) * 100}%`);
+    });
+    slider.addEventListener('change', () => {
+      void updateSettings({ lock: { dim: Number(slider.value) / 100 } });
+    });
+  }
+
+  $('#lock-preview')?.addEventListener('click', () => {
+    window.parent?.RadonOS?.taskbar?.lockScreen?.();
+  });
+
+  $('#lock-save').addEventListener('click', async () => {
+    const value = $('#lock-new').value;
+    if (value.length < 4) {
+      toast('Use at least 4 characters', { type: 'error', iconName: 'lock' });
+      return;
+    }
+    if (value !== $('#lock-confirm').value) {
+      toast('The two passwords do not match', { type: 'error', iconName: 'lock' });
+      return;
+    }
+    try {
+      await setPassword(value);
+    } catch (err) {
+      console.warn('[RadonOS] Could not store the password', err);
+      toast('Could not save the password', { type: 'error', iconName: 'lock' });
+      return;
+    }
+    toast(guarded ? 'Password changed' : 'Password set', { type: 'success', iconName: 'lock' });
+    go('appearance', 'lockscreen');
+  });
+
+  $('#lock-remove')?.addEventListener('click', async () => {
+    const ok = await confirmDialog({
+      title: 'Remove the password?',
+      message: 'The lock screen will unlock on a click again. Your files stay where they are.',
+      confirmText: 'Remove password',
+      danger: true,
+      iconName: 'lock',
+    });
+    if (!ok) return;
+    await clearPassword();
+    toast('Password removed', { type: 'success', iconName: 'lock' });
+    go('appearance', 'lockscreen');
   });
 }
 
