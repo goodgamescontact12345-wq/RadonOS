@@ -10,9 +10,8 @@
    ===================================================================== */
 :root {
   color-scheme: dark;
-  /* Linux-first type stack: Cantarell/Ubuntu when present, Noto/DejaVu after. */
-  --font: Cantarell, Ubuntu, "Adwaita Sans", "Noto Sans", "DejaVu Sans", system-ui, -apple-system, sans-serif;
-  --mono: "Ubuntu Mono", "JetBrains Mono", "DejaVu Sans Mono", "Liberation Mono", monospace;
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Inter", Roboto, sans-serif;
+  --mono: "Cascadia Code", "SFMono-Regular", Consolas, "JetBrains Mono", "Liberation Mono", monospace;
   --accent: #5b9dff;
   --accent-rgb: 91, 157, 255;
   --accent-soft: rgba(91, 157, 255, .16);
@@ -32,13 +31,13 @@
   --danger: #fb7185;
   --success: #4ade80;
   --warning: #fbbf24;
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius: 10px;
-  --radius-lg: 12px;
-  --radius-xl: 14px;
-  --taskbar-h: 30px;
-  --window-bg: #242428;
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --taskbar-h: 56px;
+  --window-bg: rgba(7, 17, 30, .90);
   --shadow-sm: 0 2px 10px rgba(0, 0, 0, .26);
   --shadow-md: 0 14px 36px rgba(0, 0, 0, .36);
   --shadow-lg: 0 32px 90px rgba(0, 0, 0, .55), 0 2px 12px rgba(0, 0, 0, .35);

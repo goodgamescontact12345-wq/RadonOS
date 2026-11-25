@@ -1311,187 +1311,129 @@ body.dragging-window { cursor: grabbing; }
 }
 
 /* =====================================================================
-   Linux / Adwaita shell layer
+   Shell polish layer
    ---------------------------------------------------------------------
-   The shell reads as a Linux desktop: a 30px top panel, a dock down the
-   left edge, flat headerbar windows with monochrome controls, and desktop
-   icons and sticky notes on the wallpaper. Everything below overrides the
-   glass-first look the shell shipped with; behaviour is untouched.
+   The pinned/running dock now lives inside the taskbar instead of
+   claiming its own strip, notes are paper cards on the wallpaper, and a
+   few details (tile depth, focus rings, drag states) are sharpened.
+   Behaviour is untouched; this is all geometry and paint.
    ===================================================================== */
+
+/* ---------------------------------------------------------------- dock */
 :root {
-  --dock-w: 56px;
-  --panel-h: 30px;
-  --taskbar-h: 30px;
-  --taskbar-gap: 0px;
-  --panel-bg: rgba(32, 32, 36, .92);
-  --adwaita-border: rgba(255, 255, 255, .10);
-  --adwaita-header: #303036;
-  --adwaita-window: #242428;
+  --dock-rail-top: auto;
+  --dock-rail-bottom: calc(var(--taskbar-gap) + 6px);
 }
-[data-theme="light"] {
-  --panel-bg: rgba(246, 245, 244, .94);
-  --adwaita-border: rgba(0, 0, 0, .12);
-  --adwaita-header: #e8e7e4;
-  --adwaita-window: #fafafa;
+:root[data-dock="top"] {
+  --dock-rail-top: calc(var(--taskbar-gap) + 6px);
+  --dock-rail-bottom: auto;
 }
 
-/* ------------------------------------------------------------- top panel */
-.taskbar {
-  top: 0;
-  bottom: auto;
-  left: 0;
-  right: 0;
-  height: var(--panel-h);
-  padding: 0 6px;
-  gap: 6px;
-  border-radius: 0;
-  border: 0;
-  border-bottom: 1px solid var(--adwaita-border);
-  background: var(--panel-bg);
-  backdrop-filter: blur(18px) saturate(1.25);
-  box-shadow: none;
-}
-/* Running windows belong to the dock now, so the middle strip steps aside. */
-.taskbar .tb-center { display: none; }
-.taskbar .tb-section { gap: 3px; }
-.start-button {
-  height: 24px;
-  padding: 0 10px 0 6px;
-  gap: 7px;
-  border-radius: 6px;
-  background: transparent;
-  border: 1px solid transparent;
-}
-.start-button:hover { background: rgba(255, 255, 255, .09); border-color: var(--adwaita-border); }
-.start-button .start-mark { color: var(--accent); }
-.panel-title { font-size: 12px; font-weight: 620; color: var(--text); letter-spacing: -.01em; }
-.tb-search { height: 22px; padding: 0 8px; border-radius: 6px; border-color: var(--adwaita-border); background: rgba(255, 255, 255, .05); }
-.tb-search .tb-search-label { font-size: 11.5px; }
-.tb-search kbd { font-size: 9.5px; }
-.tb-btn, .tb-clock { height: 24px; border-radius: 6px; }
-.tb-btn.tray-btn { width: 26px; }
-.tb-clock { padding: 0 9px; }
-.clock-time { font-size: 11.5px; }
-.clock-date { font-size: 10px; }
-.tray-dot { top: 4px; right: 4px; }
+/* The running-app strip and the dock listed the same windows. The dock
+   carries both now, so the middle strip steps aside and its column keeps
+   the bar centred. */
+.taskbar { grid-template-columns: auto 1fr auto; }
+.tb-center { display: none; }
 
-/* ----------------------------------------------------------------- dock */
 .dock {
   position: fixed;
-  left: 6px;
-  top: calc(var(--panel-h) + 8px);
-  bottom: 8px;
-  width: var(--dock-w);
-  z-index: 300;
+  left: 50%;
+  top: var(--dock-rail-top);
+  bottom: var(--dock-rail-bottom);
+  transform: translateX(-50%);
+  z-index: 320;
+  height: calc(var(--taskbar-h) - 12px);
+  max-width: calc(100vw - 760px);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 7px 4px;
-  border-radius: 12px;
-  border: 1px solid var(--adwaita-border);
-  background: color-mix(in srgb, var(--panel-bg) 94%, transparent);
-  backdrop-filter: blur(16px) saturate(1.2);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
-  overflow-y: auto;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
 }
 .dock::-webkit-scrollbar { width: 0; height: 0; }
+
 .dock-item {
   position: relative;
   flex: none;
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 9px;
-  border: 1px solid transparent;
+  border: 0;
+  border-radius: 10px;
   background: transparent;
-  color: var(--text);
   cursor: pointer;
-  transition: background .12s var(--ease), border-color .12s, transform .1s;
+  transition: background .15s var(--ease), transform .16s var(--ease);
 }
-.dock-item:hover { background: rgba(255, 255, 255, .09); }
-.dock-item.active { background: rgba(255, 255, 255, .11); border-color: var(--adwaita-border); }
-.dock-item:active { transform: scale(.96); }
-.dock-glyph { display: grid; place-items: center; color: var(--tile-color, var(--text)); }
-.dock-item.minimized .dock-glyph { opacity: .5; }
+.dock-item:hover { background: rgba(255, 255, 255, .07); transform: translateY(-2px); }
+.dock-item:active { transform: translateY(0) scale(.95); }
+.dock-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dock-item.active { background: rgba(255, 255, 255, .09); }
+
+.dock-glyph {
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--tile-color, var(--accent)) 72%, #ffffff) 0%,
+    var(--tile-color, var(--accent)) 52%,
+    color-mix(in srgb, var(--tile-color, var(--accent)) 76%, #04101d) 100%);
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--tile-color, var(--accent)) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .34);
+  transition: filter .15s, box-shadow .15s;
+}
+.dock-item:hover .dock-glyph {
+  filter: brightness(1.07);
+  box-shadow: 0 7px 16px color-mix(in srgb, var(--tile-color, var(--accent)) 42%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .42);
+}
+.dock-item.minimized .dock-glyph { opacity: .55; }
+
 .dock-dot {
   position: absolute;
-  left: 2px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
+  left: 50%;
+  bottom: 1px;
+  transform: translateX(-50%);
+  width: 4px;
   height: 0;
-  border-radius: 2px;
-  background: var(--tile-color, var(--accent));
-  transition: height .16s var(--ease);
+  border-radius: 99px;
+  background: var(--text);
+  transition: height .16s var(--ease), width .16s var(--ease), background .16s;
 }
-.dock-item.running .dock-dot { height: 6px; }
-.dock-item.active .dock-dot { height: 18px; }
-.dock-sep { width: 24px; height: 1px; flex: none; background: var(--adwaita-border); margin: 3px 0; }
+.dock-item.running .dock-dot { height: 3px; }
+.dock-item.active .dock-dot { width: 14px; height: 3px; background: var(--accent); }
 
-/* Windows sit beside the dock instead of underneath it. */
-.desktop { left: var(--dock-w); }
-.window-layer { left: var(--dock-w); }
-.widgets { right: 10px; }
+.dock-sep {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, .10);
+}
 
-/* --------------------------------------------------------------- windows */
-.window {
-  border-radius: 10px;
-  border: 1px solid var(--adwaita-border);
-  background: var(--adwaita-window);
-  box-shadow: 0 22px 54px rgba(0, 0, 0, .52), 0 1px 0 rgba(255, 255, 255, .04) inset;
-}
-.titlebar {
-  height: 34px;
-  gap: 8px;
-  padding: 0 5px 0 10px;
-  background: var(--adwaita-header);
-  border-bottom: 1px solid var(--adwaita-border);
-}
-.window-title { font-size: 12px; font-weight: 600; letter-spacing: -.01em; }
-.win-app-icon { color: var(--app-color); }
-.window-controls { gap: 1px; }
-.window-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  color: var(--text-dim);
-  background: transparent;
-  border: 0;
-}
-.window-btn:hover { background: rgba(255, 255, 255, .10); color: var(--text); }
-.window-btn.close:hover { background: #e01b24; color: #fff; }
+[data-theme="light"] .dock-item:hover { background: rgba(13, 30, 45, .06); }
+[data-theme="light"] .dock-item.active { background: rgba(13, 30, 45, .09); }
+[data-theme="light"] .dock-sep { background: rgba(13, 30, 45, .12); }
 
-/* ----------------------------------------------------------- app launcher */
-.start-menu {
-  top: calc(var(--panel-h) + 6px);
-  bottom: auto;
-  left: calc(var(--dock-w) + 6px);
-  width: min(560px, calc(100vw - var(--dock-w) - 24px));
-  max-height: calc(100vh - var(--panel-h) - 20px);
-  border-radius: 12px;
-  border: 1px solid var(--adwaita-border);
-  background: var(--panel-bg);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, .55);
-  backdrop-filter: blur(24px) saturate(1.2);
-}
-.start-app { border-radius: 8px; }
-.popover {
-  border-radius: 10px;
-  border: 1px solid var(--adwaita-border);
-  background: var(--panel-bg);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, .45);
-}
-.cmdk { border-radius: 12px; border: 1px solid var(--adwaita-border); }
+/* The start button keeps its icon-only shape; the wordmark lives in the
+   start menu header, not in the bar. */
+.taskbar .start-button .panel-title { display: none; }
 
-/* --------------------------------------------------------------- desktop */
-.desktop-icon { border-radius: 8px; }
-.desktop-icon.selected { background: var(--accent-soft); border-color: var(--accent-line); }
-.icon-surface { inset: 10px; right: calc(var(--widgets-w) + 10px); }
+/* Narrower desktops give the dock the room the search field was using. */
+@media (max-width: 1180px) {
+  .tb-search { display: none; }
+  .dock { max-width: calc(100vw - 470px); }
+  .dock-item { width: 32px; height: 32px; }
+  .dock-glyph { width: 25px; height: 25px; }
+}
 
-/* Sticky notes on the wallpaper */
+/* ------------------------------------------------------- desktop notes */
 .note-surface {
   position: absolute;
   inset: 0;
@@ -1500,103 +1442,64 @@ body.dragging-window { cursor: grabbing; }
 }
 .desktop-note {
   position: absolute;
-  width: 224px;
+  width: 232px;
   pointer-events: auto;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, .14);
-  background: #fdf6b2;
-  color: #3b3520;
-  box-shadow: 0 12px 26px rgba(0, 0, 0, .34);
+  border-radius: 12px;
+  border: 1px solid rgba(122, 98, 22, .22);
+  background: linear-gradient(165deg, #fffbc8 0%, #fbf0ac 62%, #f1e29a 100%);
+  color: #3b3213;
   font-size: 12.5px;
-  line-height: 1.5;
+  line-height: 1.55;
   overflow: hidden;
+  box-shadow: 0 16px 32px rgba(2, 10, 18, .34), 0 1px 0 rgba(255, 255, 255, .7) inset;
+  transition: box-shadow .16s var(--ease), transform .16s var(--ease);
 }
-.desktop-note.dragging { opacity: .94; box-shadow: 0 18px 34px rgba(0, 0, 0, .4); }
+.desktop-note:hover { box-shadow: 0 20px 40px rgba(2, 10, 18, .42), 0 1px 0 rgba(255, 255, 255, .7) inset; }
+.desktop-note.dragging {
+  transform: scale(1.012);
+  box-shadow: 0 28px 54px rgba(2, 10, 18, .5), 0 1px 0 rgba(255, 255, 255, .7) inset;
+}
 .note-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 22px;
-  padding: 0 4px 0 9px;
+  height: 26px;
+  padding: 0 4px 0 11px;
   cursor: grab;
-  background: rgba(0, 0, 0, .05);
-  border-bottom: 1px solid rgba(0, 0, 0, .08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, .12));
+  border-bottom: 1px solid rgba(122, 98, 22, .16);
 }
 .note-head:active { cursor: grabbing; }
-.note-grip { width: 22px; height: 3px; border-radius: 2px; background: rgba(0, 0, 0, .22); }
+.note-grip {
+  width: 22px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(122, 98, 22, .28);
+}
 .note-close {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
   border: 0;
+  border-radius: 6px;
   background: transparent;
-  color: rgba(0, 0, 0, .55);
+  color: rgba(59, 50, 19, .6);
   font: inherit;
   font-size: 15px;
   line-height: 1;
-  padding: 0 5px;
   cursor: pointer;
-  border-radius: 4px;
+  transition: background .13s, color .13s;
 }
-.note-close:hover { background: rgba(0, 0, 0, .10); color: #000; }
+.note-close:hover { background: rgba(180, 40, 40, .16); color: #7f1d1d; }
 .note-text {
-  padding: 8px 11px 12px;
-  min-height: 62px;
-  max-height: 230px;
+  padding: 9px 12px 13px;
+  min-height: 64px;
+  max-height: 240px;
   overflow: auto;
   outline: none;
   white-space: pre-wrap;
   user-select: text;
+  caret-color: #8a6d12;
 }
-.note-text:empty::before { content: 'Type your note…'; color: rgba(0, 0, 0, .35); }
-
-/* Light theme keeps the flat Linux look rather than going back to glass. */
-[data-theme="light"] .titlebar { background: var(--adwaita-header); }
-[data-theme="light"] .taskbar { background: var(--panel-bg); }
-[data-theme="light"] .dock { background: color-mix(in srgb, var(--panel-bg) 96%, transparent); }
-[data-theme="light"] .window-btn:hover { background: rgba(0, 0, 0, .08); }
-[data-theme="light"] .start-button:hover { background: rgba(0, 0, 0, .06); }
-[data-theme="light"] .dock-item:hover { background: rgba(0, 0, 0, .06); }
-[data-theme="light"] .dock-item.active { background: rgba(0, 0, 0, .09); }
-
-/* Panel geometry: the window layer and popovers hang from the top panel. */
-:root {
-  --dock-inset-top: calc(var(--panel-h) + 6px);
-  --dock-inset-bottom: 0px;
-  --dock-pop-top: calc(var(--panel-h) + 12px);
-  --dock-pop-bottom: auto;
-  --dock-start-top: calc(var(--panel-h) + 6px);
-  --dock-start-bottom: auto;
-}
-
-/* Panel layout: with the running-app strip gone, the tray hugs the right edge. */
-.taskbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 8px;
-}
-.tb-left { flex: 0 0 auto; }
-.tb-right {
-  margin-left: auto;
-  height: 26px;
-  padding: 0;
-  gap: 2px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-}
-.tb-right .tb-btn, .tb-right .tb-clock { height: 24px; }
-.show-desktop { display: none; }
-
-/* Linux desktop icons: flat glyphs on the wallpaper, not gradient tiles. */
-.icon-tile {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  color: var(--tile-color, #fff);
-  background: transparent;
-  box-shadow: none;
-  border: 0;
-}
-.icon-tile svg { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .45)); }
-.desktop-icon:hover .icon-tile { background: rgba(255, 255, 255, .10); }
-[data-theme="light"] .desktop-icon:hover .icon-tile { background: rgba(255, 255, 255, .55); }
-.desktop-icon { width: 100px; height: 104px; gap: 6px; padding: 8px 2px 6px; }
+.note-text:empty::before { content: 'Write something…'; color: rgba(59, 50, 19, .38); }

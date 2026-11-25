@@ -812,7 +812,7 @@ function renderDock(root) {
 
   root.innerHTML = group({
     title: 'Dock',
-    sub: 'The panel stays at the top; the dock holds the apps you keep close',
+    sub: 'The dock sits in the taskbar and holds the apps you keep close',
     iconName: 'monitor',
     body: [
       row({
